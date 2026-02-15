@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 
-export default function AppPage() {
+export default function DashboardPage() {
   return (
     <main style={{ padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

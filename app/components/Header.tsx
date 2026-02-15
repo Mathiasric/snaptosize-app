@@ -28,7 +28,7 @@ export function Header() {
 
         <SignedIn>
           <Link
-            href="/app"
+            href="/dashboard"
             className="text-foreground/70 transition-colors hover:text-foreground"
           >
             Dashboard
