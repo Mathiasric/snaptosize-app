@@ -1,0 +1,13 @@
+---
+alwaysApply: true
+---
+
+App Router (Next.js)
+
+Cloudflare Pages target
+
+Auth = Clerk
+
+Ingen Stripe/Worker før jeg sier det
+
+Ikke “move fast and break shit” i config
