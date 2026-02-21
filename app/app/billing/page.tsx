@@ -17,20 +17,24 @@ function BillingContent() {
   const kind = params.get("kind");
 
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   async function checkout(interval: "monthly" | "yearly") {
     setLoading(interval);
+    setCheckoutError(null);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interval }),
       });
-      if (!res.ok) throw new Error("Checkout failed");
+      if (!res.ok) throw new Error("Checkout failed. Please try again.");
       const { url } = await res.json();
+      if (!url) throw new Error("No checkout URL returned.");
       window.location.href = url;
-    } catch {
+    } catch (e) {
       setLoading(null);
+      setCheckoutError(e instanceof Error ? e.message : "Something went wrong.");
     }
   }
 
@@ -167,7 +171,7 @@ function BillingContent() {
                     Pro Yearly
                   </span>
                   <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                    Save ~17%
+                    Save 33%
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-foreground/40">
@@ -185,6 +189,10 @@ function BillingContent() {
               </div>
             </div>
           </button>
+
+          {checkoutError && (
+            <p className="text-xs text-red-400">{checkoutError}</p>
+          )}
         </div>
       )}
     </div>
