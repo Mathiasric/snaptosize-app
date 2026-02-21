@@ -4,10 +4,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
 
-function UpgradeButton() {
+function PlanIndicator() {
   const { user, isLoaded } = useUser();
   const plan = (user?.publicMetadata as { plan?: string } | undefined)?.plan;
-  if (!isLoaded || plan === "pro") return null;
+  if (!isLoaded) return null;
+  if (plan === "pro") {
+    return (
+      <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-light">
+        Pro
+      </span>
+    );
+  }
   return (
     <Link
       href="/app/billing?source=nav"
@@ -51,12 +58,12 @@ export function Header() {
         </SignedOut>
 
         <SignedIn>
-          <UpgradeButton />
+          <PlanIndicator />
           <Link
-            href="/app"
+            href="/app/billing"
             className="text-foreground/60 transition-colors hover:text-accent-light"
           >
-            Dashboard
+            Billing
           </Link>
           <SignOutButton>
             <button className="rounded-full border border-border px-4 py-1.5 text-sm text-foreground/60 transition-colors hover:border-accent/40 hover:text-foreground">

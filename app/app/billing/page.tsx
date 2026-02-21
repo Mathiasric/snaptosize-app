@@ -98,23 +98,23 @@ function BillingContent() {
       )}
 
       {/* Current plan */}
-      <div className="rounded-xl border border-border bg-surface p-5">
+      <div className={`rounded-xl border p-5 ${isPro ? "border-accent/30 bg-accent/5" : "border-border bg-surface"}`}>
         <div className="flex items-center gap-2">
-          <Crown
-            size={16}
-            className={isPro ? "text-accent-light" : "text-foreground/30"}
-          />
+          {isPro ? (
+            <CheckCircle2 size={16} className="text-accent-light" />
+          ) : (
+            <Crown size={16} className="text-foreground/30" />
+          )}
           <span className="text-sm font-semibold text-foreground">
             Current plan
           </span>
         </div>
         <p className="mt-1 text-lg font-bold text-foreground">
-          {!isLoaded ? "..." : isPro ? "Pro" : "Free"}
+          {!isLoaded ? "..." : isPro ? "Pro active" : "Free"}
         </p>
         {isPro && (
-          <p className="mt-1 text-xs text-foreground/40">
-            Unlimited packs and quick exports. Thank you for supporting
-            SnapToSize!
+          <p className="mt-1 text-xs text-foreground/50">
+            Unlimited exports unlocked. Thank you for supporting SnapToSize!
           </p>
         )}
         {isLoaded && !isPro && (
