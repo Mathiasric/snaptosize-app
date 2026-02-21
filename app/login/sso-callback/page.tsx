@@ -1,5 +1,5 @@
-import { SSOCallback } from "@clerk/nextjs";
+import { AuthenticateWithRedirectCallback } from "@clerk/nextjs";
 
 export default function Page() {
-  return <SSOCallback />;
+  return <AuthenticateWithRedirectCallback afterSignInUrl="/app/packs" afterSignUpUrl="/app/packs" />;
 }
