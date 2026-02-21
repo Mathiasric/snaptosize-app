@@ -1,0 +1,64 @@
+import Stripe from "stripe";
+import { clerkClient } from "@clerk/nextjs/server";
+
+export const runtime = "edge";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-01-28.clover",
+});
+
+async function updatePlan(userId: string, plan: "pro" | "free", stripeCustomerId?: string) {
+  const clerk = await clerkClient();
+  await clerk.users.updateUserMetadata(userId, {
+    publicMetadata: { plan },
+    ...(stripeCustomerId ? { privateMetadata: { stripeCustomerId } } : {}),
+  });
+}
+
+export async function POST(req: Request) {
+  const body = await req.text();
+  const sig = req.headers.get("stripe-signature");
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !secret) {
+    return Response.json({ error: "Missing signature or secret" }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(body, sig, secret);
+  } catch {
+    return Response.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.mode !== "subscription") break;
+      const userId = session.client_reference_id || session.metadata?.userId;
+      if (!userId) break;
+      const customerId = typeof session.customer === "string" ? session.customer : undefined;
+      await updatePlan(userId, "pro", customerId);
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const sub = event.data.object as Stripe.Subscription;
+      const userId = sub.metadata?.userId;
+      if (!userId) break;
+      const active = sub.status === "active" || sub.status === "trialing";
+      await updatePlan(userId, active ? "pro" : "free");
+      break;
+    }
+
+    case "customer.subscription.deleted": {
+      const sub = event.data.object as Stripe.Subscription;
+      const userId = sub.metadata?.userId;
+      if (!userId) break;
+      await updatePlan(userId, "free");
+      break;
+    }
+  }
+
+  return Response.json({ received: true });
+}
