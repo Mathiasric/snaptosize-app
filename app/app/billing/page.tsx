@@ -16,12 +16,12 @@ function BillingContent() {
   const source = params.get("source");
   const kind = params.get("kind");
 
-  const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<"monthly" | "yearly" | "portal" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function checkout(interval: "monthly" | "yearly") {
     setLoading(interval);
-    setCheckoutError(null);
+    setActionError(null);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -34,7 +34,22 @@ function BillingContent() {
       window.location.href = url;
     } catch (e) {
       setLoading(null);
-      setCheckoutError(e instanceof Error ? e.message : "Something went wrong.");
+      setActionError(e instanceof Error ? e.message : "Something went wrong.");
+    }
+  }
+
+  async function openPortal() {
+    setLoading("portal");
+    setActionError(null);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      if (!res.ok) throw new Error("Couldn\u2019t open billing portal. Try again.");
+      const { url } = await res.json();
+      if (!url) throw new Error("No portal URL returned.");
+      window.location.href = url;
+    } catch (e) {
+      setLoading(null);
+      setActionError(e instanceof Error ? e.message : "Something went wrong.");
     }
   }
 
@@ -124,6 +139,28 @@ function BillingContent() {
         )}
       </div>
 
+      {/* Manage subscription — Pro only */}
+      {isLoaded && isPro && (
+        <div className="space-y-3">
+          <button
+            onClick={openPortal}
+            disabled={loading !== null}
+            className="w-full rounded-xl border border-border bg-surface p-4 text-sm font-semibold text-foreground transition-colors hover:border-accent/30"
+          >
+            {loading === "portal" ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader size={14} className="animate-spin" /> Opening portal…
+              </span>
+            ) : (
+              "Manage subscription"
+            )}
+          </button>
+          {actionError && (
+            <p className="text-xs text-red-400">{actionError}</p>
+          )}
+        </div>
+      )}
+
       {/* Upgrade cards — only show if not Pro */}
       {isLoaded && !isPro && (
         <div className="space-y-3">
@@ -190,8 +227,8 @@ function BillingContent() {
             </div>
           </button>
 
-          {checkoutError && (
-            <p className="text-xs text-red-400">{checkoutError}</p>
+          {actionError && (
+            <p className="text-xs text-red-400">{actionError}</p>
           )}
         </div>
       )}

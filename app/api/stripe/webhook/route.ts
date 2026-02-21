@@ -47,7 +47,8 @@ export async function POST(req: Request) {
       const userId = sub.metadata?.userId;
       if (!userId) break;
       const active = sub.status === "active" || sub.status === "trialing";
-      await updatePlan(userId, active ? "pro" : "free");
+      const custId = typeof sub.customer === "string" ? sub.customer : undefined;
+      await updatePlan(userId, active ? "pro" : "free", custId);
       break;
     }
 
