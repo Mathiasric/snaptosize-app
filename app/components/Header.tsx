@@ -2,7 +2,21 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { SignedIn, SignedOut, SignOutButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
+
+function UpgradeButton() {
+  const { user, isLoaded } = useUser();
+  const plan = (user?.publicMetadata as { plan?: string } | undefined)?.plan;
+  if (!isLoaded || plan === "pro") return null;
+  return (
+    <Link
+      href="/app/billing?source=nav"
+      className="gradient-btn rounded-full px-4 py-1.5 text-xs font-semibold text-white"
+    >
+      Upgrade
+    </Link>
+  );
+}
 
 export function Header() {
   return (
@@ -37,6 +51,7 @@ export function Header() {
         </SignedOut>
 
         <SignedIn>
+          <UpgradeButton />
           <Link
             href="/app"
             className="text-foreground/60 transition-colors hover:text-accent-light"

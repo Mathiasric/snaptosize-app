@@ -448,7 +448,7 @@ export default function QuickExportPage() {
                   You&apos;ve used today&apos;s 3 free Quick Exports. Upgrade for unlimited exports.
                 </p>
                 <a
-                  href="/app/billing"
+                  href="/app/billing?source=limit&kind=FREE_QUICK_LIMIT"
                   className="gradient-btn mt-2 inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
                 >
                   Upgrade to Pro

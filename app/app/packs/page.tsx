@@ -361,7 +361,7 @@ export default function AppPage() {
                   You&apos;ve used today&apos;s 1 free ZIP pack. Upgrade for unlimited packs.
                 </p>
                 <a
-                  href="/app/billing"
+                  href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"
                   className="gradient-btn mt-2 inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
                 >
                   Upgrade to Pro

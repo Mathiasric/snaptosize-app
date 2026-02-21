@@ -144,7 +144,7 @@ export function JobCard({ group, job, onRetry }: JobCardProps) {
             Free limit: 1 ZIP per run. Upgrade to generate multiple packs at once.
           </p>
           <a
-            href="/app/billing"
+            href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"
             className="gradient-btn inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white"
           >
             <Lock size={14} />

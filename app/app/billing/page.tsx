@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { CheckCircle2, XCircle, Crown, Loader, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle, Crown, Loader, Sparkles } from "lucide-react";
 
 function BillingContent() {
   const params = useSearchParams();
@@ -13,6 +13,8 @@ function BillingContent() {
 
   const success = params.get("success") === "1";
   const canceled = params.get("canceled") === "1";
+  const source = params.get("source");
+  const kind = params.get("kind");
 
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
 
@@ -72,6 +74,25 @@ function BillingContent() {
         </div>
       )}
 
+      {/* Limit hit banner */}
+      {source === "limit" && !isPro && (
+        <div className="flex items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-accent-light" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              You hit today&apos;s free limit
+            </p>
+            <p className="mt-0.5 text-xs text-foreground/50">
+              {kind === "FREE_QUICK_LIMIT"
+                ? "You\u2019ve used all 3 free Quick Exports for today."
+                : kind === "FREE_BATCH_LIMIT"
+                  ? "You\u2019ve used your 1 free ZIP pack for today."
+                  : "Upgrade to Pro to continue without limits."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Current plan */}
       <div className="rounded-xl border border-border bg-surface p-5">
         <div className="flex items-center gap-2">
@@ -90,6 +111,11 @@ function BillingContent() {
           <p className="mt-1 text-xs text-foreground/40">
             Unlimited packs and quick exports. Thank you for supporting
             SnapToSize!
+          </p>
+        )}
+        {isLoaded && !isPro && (
+          <p className="mt-1 text-xs text-foreground/40">
+            Limits: 3 Quick Exports/day &bull; 1 Pack/day
           </p>
         )}
       </div>
