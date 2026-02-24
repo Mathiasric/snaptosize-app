@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { clerkClient } from "@clerk/nextjs/server";
+import { posthogCapture } from "@/app/lib/posthog";
 
 export const runtime = "edge";
 
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
       if (!userId) break;
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       await updatePlan(userId, "pro", customerId);
+      posthogCapture(userId, "checkout_completed", {});
       break;
     }
 

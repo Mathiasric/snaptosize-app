@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import Stripe from "stripe";
+import { posthogCapture } from "@/app/lib/posthog";
 
 export const runtime = "edge";
 
@@ -36,6 +37,8 @@ export async function POST(req: Request) {
     subscription_data: { metadata: { userId } },
     ...(email ? { customer_email: email } : {}),
   });
+
+  posthogCapture(userId, "checkout_started", { interval: interval || "monthly" });
 
   return Response.json({ url: session.url });
 }
