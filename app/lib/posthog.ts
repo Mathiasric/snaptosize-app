@@ -4,10 +4,10 @@ export async function posthogCapture(
   event: string,
   properties?: Record<string, unknown>
 ): Promise<void> {
-  const host = process.env.POSTHOG_HOST;
+  const host = process.env.POSTHOG_HOST || "https://eu.posthog.com";
   const apiKey = process.env.POSTHOG_API_KEY;
 
-  if (!host || !apiKey) return;
+  if (!apiKey) return;
 
   try {
     await fetch(`${host}/capture/`, {
