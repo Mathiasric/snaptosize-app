@@ -1,7 +1,7 @@
 # PROJECT_STATE.md  
 ## SnapToSize — Authoritative System State
 
-Last updated: 2026-02-18
+Last updated: 2026-02-24
 
 ---
 
@@ -49,6 +49,9 @@ Runner:
 Storage:
 - Cloudflare R2 bucket: `snaptosize-zips`
 
+Cloudflare Pages now requires:
+- WORKER_BASE_URL set in Production environment variables
+
 ---
 
 # 3. Backend Status (PRODUCTION READY)
@@ -61,7 +64,7 @@ Five production Etsy ZIP packs:
 2. 3x4_ratio.zip  
 3. 4x5_ratio.zip  
 4. ISO_A_series.zip  
-5. Common_sizes.zip 
+5. Common_sizes.zip  
 +1. 2x3_print_sizes.zip  
 +2. 3x4_print_sizes.zip  
 +3. 4x5_print_sizes.zip  
@@ -77,258 +80,207 @@ Each pack:
 - 20MB Etsy hard limit enforced
 - Quality fallback: 80 → 76 → 72 → 68 → 64 → 60
 
-+## 3.1.1 Job Modes (Locked)
-+
-+System supports multiple output modes via the same job pipeline (Next → Worker → Runner → R2):
-+
-+- `mode = "pack"` (default)
-+  - Output: ZIP (application/zip)
-+  - Contains multiple JPG files in a single top-level folder per group.
-+
-+- `mode = "single"` (in progress)
-+  - Output: single JPG (image/jpeg)
-+  - User selects one size within a group + orientation (Portrait/Landscape).
-+  - Landscape = swapped dimensions (same ratio group, rotated target).
-+
-+This avoids adding parallel pipelines and keeps KV/R2/presign consistent.
-+
-+---
-+
+---
+
+## 3.1.1 Job Modes (Locked)
+
+System supports multiple output modes via the same job pipeline:
+
+- `mode = "pack"` (default)
+  - Output: ZIP (application/zip)
+
+- `mode = "single"` (LIVE)
+  - Output: single JPG (image/jpeg)
+  - User selects size + orientation
+  - Landscape swaps dimensions
+
+Single mode now:
+- Runner: implemented
+- Worker: implemented
+- Frontend: implemented (Quick Export tab)
+- Presigned filename respected
+- Content-Disposition enforced
 
 ---
 
 ## 3.2 Naming Standard (Locked)
 
-### Inch-based packs (2x3 / 3x4 / 4x5 / EXTRAS)
+### Pack ZIP + Folder naming
 
-Format:
+ZIP filename:
+- `<group>_print_sizes.zip`
 
+Folder inside ZIP:
+- `<group>_print_sizes/`
+- No UUID paths
 
-Structure:
+### Single export naming
 
-- Inches
-- Centimeters (rounded properly)
-- Pixel dimensions
+Uses:
+- `download_filename` from KV
 
-+### Pack ZIP + Folder naming
-+
-+- ZIP filename (customer-facing): `<group>_print_sizes.zip`
-+  - `2x3_print_sizes.zip`, `3x4_print_sizes.zip`, `4x5_print_sizes.zip`
-+  - `iso_print_sizes.zip`, `extras_print_sizes.zip`
-+
-+- Folder inside ZIP (top-level): `<group>_print_sizes/`
-+  - No UUIDs. No internal paths.
----
+Fallback:
+- `export_<group>_<size>_<orientation>.jpg`
 
-### ISO Pack
-+### Single export naming (customer-facing)
-Format:
+All downloads set Content-Disposition.
 
-
-Structure:
-
-- ISO label
-- Exact cm
-- Pixel dimensions
-+Single JPG download uses `download_filename` (stored in KV when done).
-+Fallback format if missing:
-+
-+- `export_<group>_<size>_<orientation>.jpg`
-
-No inches used for ISO.
-+All downloads must set Content-Disposition to match customer-facing filename (presigned `response-content-disposition`).
 ---
 
 ## 3.3 Stretch Policy (Strategic Choice)
 
-We deliberately use stretch resize instead of crop.
+Deliberate stretch resize.
 
-Reason:
-- Etsy sellers prefer zero-content-loss.
-- Cropping removes important artwork details.
-- Stretch difference visually negligible at print scale.
-
-This is a product differentiator.
+Product differentiator.
 
 ---
 
 ## 3.4 20MB Etsy Limit Handling
 
-ZIP size must be ≤ 20MB.
+ZIP size ≤ 20MB.
 
-Logic:
-- Pre-resize images once
-- Retry JPEG encoding at lower quality if needed
-- Hard fail at quality 60 if still >20MB
+Fallback encoding chain preserved.
 
-System returns 413 if limit exceeded.
+413 returned on hard fail.
 
-+## 3.5 Single Export Mode (Quick Export) — In Progress
-+
-+Goal:
-+- Let users export ONE print size (not a full ZIP pack), using the same group catalogs.
-+
-+Input (job payload):
-+- `mode: "single"`
-+- `group: "2x3" | "3x4" | "4x5" | "ISO" | "EXTRAS"`
-+- `size`: one size identifier within the group (e.g. `12x16`, `A4`, `8.5x11`)
-+- `orientation: "Portrait" | "Landscape"` (Landscape swaps target dimensions)
-+
-+Output:
-+- Single JPG uploaded to R2
-+- Worker generates presigned download URL
-+- Filename comes from `download_filename` stored in KV state
-+
-+Status:
-+- Runner: implemented (early-return branch for `mode=="single"`, pack logic unchanged)
-+- Worker: pending (KV fields + presign filename + content-type)
-+- Frontend: pending (Quick Export UI tab + size picker)
-+
-
-Square support (Quick Export only):
-- Orientation supports: Portrait | Landscape | Square
-- Square uses group = "SQUARE"
-- Supported square sizes (300 DPI):
-  - 8x8  -> 2400x2400
-  - 10x10 -> 3000x3000
-  - 12x12 -> 3600x3600
-  - 16x16 -> 4800x4800
-  - 20x20 -> 6000x6000
-  - 24x24 -> 7200x7200
-- Output: single JPG (image/jpeg) with `download_filename` stored in KV
-- Pack-mode remains untouched
-+---
-+
 ---
 
-# 4. Free vs Pro System (Current State)
+## 3.5 Quick Export Mode (LIVE)
+
+Square supported.
+
+All orientations working.
+
+Same quota system as pack mode.
+
+---
+
+# 4. Free vs Pro System (LIVE)
 
 ## 4.1 Free Plan
 
-UPDATE (Model B — Separate counters):
+Enforced at Worker level.
 
-Free Plan limits (enforced at Worker /enqueue):
-- Quick Export (mode="single"): 3 exports/day
-- Packs (mode="pack" or missing): 1 ZIP/day
+Limits:
+- Quick Export: 3/day
+- Packs: 1/day
 
-Implementation details:
-- KV key: `quota:${userId}:${YYYY-MM-DD}`
-- Value: `{ "quick": number, "batch": number }`
-- TTL: 36 hours
-- Enforcement returns HTTP 402 with JSON:
-  - `{ error: "FREE_QUICK_LIMIT", message, retry_after_sec }`
-  - `{ error: "FREE_BATCH_LIMIT", message, retry_after_sec }`
+HTTP 402 responses:
+- FREE_QUICK_LIMIT
+- FREE_BATCH_LIMIT
 
-UserId source:
-- Authenticated: `clerk:{JWT sub}` (Clerk user id)
-- Unauthenticated fallback: `ip:{client IP}`
+KV key:
+`quota:{userId}:{YYYY-MM-DD}`
 
-Pro bypass:
-- If plan resolves to `"pro"` (JWT claim variants), quota block is skipped.
+TTL: 36h
 
-NOTE:
-- Demo bypass still exists for internal testing (`demo: true`), but should be removed before public monetization launch.
-
-
- 
+Server-authoritative.
 
 ---
 
-## 4.2 Temporary Demo Bypass (Development Only)
+## 4.2 Stripe Integration (LIVE)
 
-Worker logic currently:
+## 4.2 Stripe Integration (LIVE – HARDENED)
 
+Stripe Checkout: implemented  
+Stripe Customer Portal: implemented  
+Stripe Webhook: implemented  
+Clerk metadata sync: implemented  
 
-If `demo: true` is sent in enqueue payload:
-- Skips quota
-- Does NOT decrement usage
-- For internal testing only
+Lifecycle hardening (2026-02-24):
 
-This must be removed before production monetization phase.
+Handled statuses:
+- active → pro
+- trialing → pro
+- past_due → pro (grace period retained)
+- canceled → free
+- unpaid → free
+- incomplete → free
+- incomplete_expired → free
+
+Webhook improvements:
+- Idempotency guard (event.id deduplication per instance)
+- Explicit error handling (returns 500 to trigger Stripe retry)
+- Stripe remains source of truth
+- Clerk mirrors subscription state
+
+Plan propagation:
+Stripe → Webhook → Clerk publicMetadata.plan → JWT → Worker enforcement
+
+Worker fail-safe:
+If plan unclear or missing → treated as free.
 
 ---
 
-## 4.3 Current Plan Model
+## 4.3 Demo Bypass (REMOVED – 2026-02-24)
 
-There is no real Pro plan yet.
+Production demo bypass eliminated.
 
-We have:
-- Clerk auth working
-- Free quota logic working
-- No Stripe integration
-- No subscription validation
-- No server-side plan lookup yet
+Changes:
+- Worker no longer respects client-provided `demo` flag for quota bypass.
+- Quota enforcement depends ONLY on plan (free/pro).
+- Worker forcibly sets:
+  - free → demo=true (watermark)
+  - pro → demo=false
+- `/app/test` page removed from frontend.
 
-Pro logic not implemented.
+Result:
+No production path exists to bypass quota without Stripe-backed Pro plan.
 
 ---
-# Phase 4 – JWT Plan Enforcement (Clerk → Worker)
 
-## Auth Status
+## 4.4 Abuse Protection (LIVE – 2026-02-24)
 
-### Clerk
-- Auth fully implemented
-- Test user updated:
-  - `publicMetadata.plan = "pro"`
-- JWT template created:
-  - Name: `snap`
-- Custom claim configured in template:
+Worker-level abuse protection implemented.
 
-```json
-{
-  "plan": "{{user.public_metadata.plan}}"
-}
+Rate limits (per userId or ip fallback):
+- POST /upload → 10 requests / 10 minutes
+- POST /enqueue → 30 requests / 10 minutes
 
+Active job caps (KV counter-based, O(1)):
+- Free: 2 concurrent jobs
+- Pro: 7 concurrent jobs
+
+Implementation:
+- KV key: active:{userId}
+- TTL: 60 minutes (self-healing)
+- active_counted flag prevents double-decrement
+- 429 responses:
+  - code: "rate_limited"
+  - error: "too_many_active_jobs"
+
+No API contract changes.
+Quota system (402 FREE_*) unchanged.
 
 # 5. Frontend Status
 
 ## 5.1 Production UI
 
-Location:
- 
-Features:
-- Single upload
-- Multi-pack selection
-- Select all / Deselect all
-- One enqueue per pack
-- Single polling loop
-- Individual job tracking
-- Individual download buttons
-- Uses proxy-only API routes
-- Clean minimal dark UI
+- Packs working
+- Quick Export working
+- Billing page working
+- 402 paywall UX implemented
+- Pro badge visible
+- Yearly discount badge (33%)
 
-Quick Export (Single) UI:
-- Separate page from Packs
-- Orientation toggle: Portrait / Landscape / Square
-- Square hides ratio groups and shows square size dropdown
-- Micro preview + click-to-zoom implemented
-- Debug UI should be hidden in production builds (dev may show)
 ---
 
 ## 5.2 Debug Page
 
-Location:
- 
-Purpose:
-- E2E debugging
-- Manual group testing
-- Demo bypass testing
+Still present for internal use.
 
-Not part of product UX.
+Not public UX.
 
 ---
 
 # 6. Worker API (Immutable Contract)
 
-Endpoints:
-
 POST /upload  
 POST /enqueue  
 GET /status/:job_id  
 GET /download/:job_id  
-POST /upload-zip (internal)
+POST /upload-zip  
 
-No changes allowed without versioning.
+Contract unchanged.
 
 ---
 
@@ -336,60 +288,276 @@ No changes allowed without versioning.
 
 - Infrastructure
 - ZIP generation
+- Quick Export
 - Naming
-- Etsy pack structure
 - 20MB enforcement
+- Stripe checkout
+- Webhook sync
+- Pro gating
 - Proxy architecture
-- Multi-pack UI
-- R2 upload flow
+- Abuse protection (rate limits + active job caps)
+- Abuse protection (rate limiting + O(1) active job caps)         
 
-Core product works end-to-end.
+Core + monetization + protection base working.
 
 ---
 
 # 8. What Is NOT Built Yet
 
-- Stripe billing
-- Subscription management
-- Plan storage in DB
-- Pro verification
-- Rate limiting beyond daily free
+- Subscription lifecycle UX polish (cancel_at_period_end display)
 - Analytics
-- Production domain cutover
-- Removal of demo bypass
-- Marketing automation
 
 ---
+
+# 8.1 Production Reliability Layer (LIVE – PRODUCTION)
+Reliability system is fully implemented and deployed.
+
+System is:
+
+Self-healing
+
+KV-backed
+
+Cron-monitored
+
+Push-alert enabled
+
+Layer 1: Persistent Job State (LIVE)
+
+KV key:
+
+job:{job_id}
+
+State includes:
+
+status
+
+retry_count
+
+error_code
+
+error_message
+
+runner_status
+
+r2_key
+
+updated_at
+
+alert_sent
+
+KV updated on:
+
+enqueue start
+
+runner_call start
+
+retry increment
+
+runner failure
+
+process_done
+
+timeout
+
+job_id is authoritative operational key.
+
+Layer 2: Auto-Heal (LIVE)
+
+Worker retries runner up to 3 times on:
+
+network error
+
+5xx
+
+timeout
+
+Exponential backoff.
+
+After 3 failures:
+
+status = error
+
+error_code = "runner_failed"
+
+alert triggered
+
+Layer 3: Stuck Job Detection (LIVE)
+
+Cloudflare Cron Trigger:
+
+*/5 * * * *
+
+Every 5 minutes:
+
+Scan KV prefix job:
+
+If status == running AND updated_at older than 10 min:
+
+Mark error
+
+error_code = "timeout"
+
+Send alert
+
+Pagination implemented.
+Milliseconds consistent.
+No manual monitoring required.
+
+Layer 4: Mobile Alerting (LIVE)
+
+Alert channel: Pushover
+
+Trigger conditions:
+
+runner failed after retries
+
+stuck job detected
+
+job transitions to error
+
+Alert contains:
+
+job_id
+
+error_code
+
+group
+
+mode
+
+alert_sent flag prevents duplicate alerts.
+
+System is production-safe without live supervision.
+
+---
+
+## Layer 1: Persistent Job State (KV-backed)
+
+Each job_id becomes the single source of truth.
+
+KV key:
+job:{job_id}
+
+Value structure:
+{
+  status: "running" | "done" | "error",
+  retry_count: number,
+  error_code?: string,
+  error_message?: string,
+  runner_status?: number,
+  r2_key?: string,
+  updated_at: timestamp
+}
+
+Worker must update KV at:
+- enqueue start
+- runner_call start
+- runner_call fail
+- retry increment
+- process_done
+- error
+- timeout
+
+job_id becomes primary operational debug key.
+
+request_id remains correlation key.
+
+---
+
+## Layer 2: Auto-Heal (Retry Logic)
+
+Worker must:
+
+- Retry runner_call up to 3 times on:
+  - network error
+  - 5xx
+  - timeout
+
+- Exponential backoff
+
+After 3 failures:
+  status = error
+  error_code = "runner_failed"
+
+System should attempt self-recovery before alerting.
+
+---
+
+## Layer 3: Stuck Job Detection (Cron)
+
+Cloudflare Cron Trigger (every 5 minutes):
+
+- Scan KV
+- Find jobs:
+    status = running
+    updated_at older than 10 minutes
+
+- Mark:
+    status = error
+    error_code = "timeout"
+
+- Trigger alert
+
+---
+
+## Layer 4: Mobile Alerting
+
+Alert channel: Pushover
+
+Worker sends push notification when:
+- job transitions to error
+- stuck job detected
+- runner repeatedly fails
+
+Alert includes:
+- job_id
+- error_code
+- group
+- mode
+
+Goal:
+Phone notification within 1–5 minutes of production failure.
+
+---
+
+## Layer 5: Debug Ergonomics
+
+Future additions:
+- CLI script: fetch job state + worker logs + runner logs by job_id
+- UI button: "Copy debug info"
+
+job_id is operational case number.
+
+---
+
+After this layer is implemented:
+
+SnapToSize becomes:
+- Self-healing
+- Self-monitoring
+- Push-alert enabled
+- Production-safe without live supervision
 
 # 9. Strategic Positioning
 
 SnapToSize = Etsy-native print pack generator.
 
-Differentiators:
-
-- Stretch instead of crop
-- Fully Etsy-structured ZIP packs
-- Proper cm + inch labeling
-- 20MB aware system
-- Batch generation for all major ratios
-
-Goal:
-Become default backend tool for Etsy digital print sellers.
+Differentiators unchanged.
 
 ---
 
 # 10. Next Phase Roadmap
 
-UPDATE (immediate next steps):
+## Immediate Next Step
 
-Next steps (in order):
-1) Frontend paywall UX for quota (handle HTTP 402):
-   - Show Upgrade card for FREE_QUICK_LIMIT / FREE_BATCH_LIMIT
-   - Disable relevant action buttons (Export / Generate)
-2) Stripe subscriptions (Checkout + Portal)
-3) Webhook updates Clerk plan metadata → JWT claim
-4) Worker plan enforcement becomes fully production-authoritative (Pro unlimited)
-5) Remove demo bypass before launch
+## Immediate Next Step
+
+1. Remove demo bypass
+2. Stripe Customer Portal
+3. Subscription lifecycle hardening
+4. Abuse protection
+5. Analytics
 
 ---
 
@@ -404,33 +572,20 @@ Next steps (in order):
 
 ---
 
-# 11. Next Chat Context Template
+# 11. Important Rules Going Forward
 
-Start next chat with:
-
-
----
-
-# 12. Important Rules Going Forward
-
-- No breaking Worker contract.
-- No direct browser → Worker calls.
-- No local file generation.
-- No architectural redesign.
-- Monetization must be server-authoritative.
-- Remove demo bypass before public launch.
+- No Worker contract breakage.
+- Stripe is subscription authority.
+- Clerk mirrors state.
+- No architecture drift.
+- No client-side plan trust.
+- Remove demo bypass before scale.
 
 ---
 
-# 13. Current System Status
+# 12. Current System Status
 
-System is:
+Core engine + billing + reliability + abuse protection complete.
 
-Technically production-ready  
-Monetization-incomplete  
-Architecturally sound  
-Scalable to high volume  
-
-Core engine is done.
-
-Next step = business layer.
+Next major build:
+Analytics (server-side event tracking).
