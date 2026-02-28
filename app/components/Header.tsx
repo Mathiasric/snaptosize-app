@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
@@ -27,6 +28,14 @@ function PlanIndicator() {
 
 export function Header() {
   const { signOut } = useClerk();
+
+  // Override Clerk's __unstable__onBeforeSetActive to prevent server action
+  // POST to static pages (causes 405 on Cloudflare Pages).
+  // Clerk sets this in useLayoutEffect; our useEffect runs after, overriding it.
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__unstable__onBeforeSetActive = () => Promise.resolve();
+  }, []);
 
   const handleSignOut = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
