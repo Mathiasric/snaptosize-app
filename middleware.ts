@@ -6,12 +6,20 @@ const isProtectedRoute = createRouteMatcher([
   "/app/dashboard(.*)",
 ]);
 
+// Static page routes that cannot handle POST (server action or Stripe redirect)
+const staticAppPages = new Set(["/app/billing", "/app/packs", "/app/quick-export", "/app"]);
+
 export default clerkMiddleware(async (auth, req) => {
-  // Handle POST to /app/billing - redirect to GET
-  // Prevents 405 from Stripe checkout POST redirects
-  if (req.method === "POST" && req.nextUrl.pathname === "/app/billing") {
-    const url = new URL(req.url);
-    return NextResponse.redirect(url.toString(), 303);
+  if (req.method === "POST" && staticAppPages.has(req.nextUrl.pathname)) {
+    // Clerk server action POST (invalidateCacheAction) — return empty success
+    if (req.headers.get("next-action")) {
+      return new NextResponse("0:{}\n", {
+        status: 200,
+        headers: { "content-type": "text/x-component" },
+      });
+    }
+    // Stripe checkout POST redirect — 303 to GET
+    return NextResponse.redirect(new URL(req.url).toString(), 303);
   }
 
   if (isProtectedRoute(req)) await auth.protect();
