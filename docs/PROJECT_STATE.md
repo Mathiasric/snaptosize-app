@@ -154,6 +154,26 @@ Same quota system as pack mode.
 
 ---
 
+## 3.6 Server-Side Analytics (LIVE)
+
+PostHog server-side analytics implemented.
+
+Worker emits events:
+
+- enqueue_success
+- job_done
+- job_error
+- download_clicked
+
+Events are:
+- Non-blocking (ctx.waitUntil)
+- Fail-silent
+- No PII (distinct_id = clerk:{userId} or ip:{ip})
+- EU host default (https://eu.posthog.com)
+- Requires POSTHOG_API_KEY secret in Worker
+
+Analytics is production-safe and verified live.
+
 # 4. Free vs Pro System (LIVE)
 
 ## 4.1 Free Plan
@@ -296,7 +316,8 @@ Contract unchanged.
 - Pro gating
 - Proxy architecture
 - Abuse protection (rate limits + active job caps)
-- Abuse protection (rate limiting + O(1) active job caps)         
+- Abuse protection (rate limiting + O(1) active job caps) 
+- Server-side analytics (PostHog)        
 
 Core + monetization + protection base working.
 
@@ -551,15 +572,26 @@ Differentiators unchanged.
 
 ## Immediate Next Step
 
-## Immediate Next Step
+1. Marketing layer upgrade (snaptosize.com redesign)
+   - Align visual identity with app.snaptosize.com
+   - Clean premium SaaS design (minimal, structured, confident)
+   - Add real product screenshots / flow visuals
+   - Clear positioning: Etsy-native print pack generator
+   - Strong CTA: Start free → app.snaptosize.com
+   - Structured pricing section
+   - FAQ addressing Etsy sellers’ real concerns
 
-1. Remove demo bypass
-2. Stripe Customer Portal
-3. Subscription lifecycle hardening
-4. Abuse protection
-5. Analytics
+2. Conversion architecture
+   - Ensure clean separation:
+     snaptosize.com → marketing
+     app.snaptosize.com → product
+   - No embedding of app inside marketing
+   - Clear upgrade path
 
----
+3. Core funnel dashboard in PostHog
+   - Funnel: enqueue_success → job_done → download_clicked
+   - Breakdown by plan and mode
+   - Monitor job_error rate
 
 ## Phase 3: Hardening
 
@@ -587,5 +619,20 @@ Differentiators unchanged.
 
 Core engine + billing + reliability + abuse protection complete.
 
-Next major build:
-Analytics (server-side event tracking).
+## Next Major Build
+
+Growth & Conversion Infrastructure
+
+Focus shifts from backend stability to distribution and revenue optimization.
+
+Scope:
+
+- SEO content layer (Etsy guides, print size resources)
+- Conversion copy optimization
+- Pricing experiments
+- Upgrade funnel tracking (checkout_started → checkout_completed)
+- Stripe lifecycle UX polish (portal clarity, cancellation flow)
+- Revenue dashboard (MRR, Pro activation rate)
+
+Backend engine is stable.
+Now building growth engine.

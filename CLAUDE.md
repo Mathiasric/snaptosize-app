@@ -1,259 +1,148 @@
-# SnapToSize — Complete System Context
+# SnapToSize — CLAUDE.md
+## Execution & Implementation Contract
 
-# Authority Order
+---
 
-If multiple markdown files conflict, follow this priority:
+# AUTHORITY
 
-1. CLAUDE.md (highest authority)
-2. ARCHITECTURE.md
-3. PROJECT_STATE.md
-4. ROADMAP_1M_STRATEGY.md
-5. Any other documentation
+PROJECT_STATE.md is the authoritative system state.
 
-Never override CLAUDE.md unless explicitly instructed.
+Before implementing anything:
+1. Read PROJECT_STATE.md fully.
+2. Treat it as ground truth.
+3. Do not assume missing features.
+4. Do not rely on outdated documentation.
 
-All system-level architectural decisions must align with docs/ARCHITECTURE.md.
-All current state references must align with docs/PROJECT_STATE.md.
+If this file conflicts with PROJECT_STATE.md:
+→ PROJECT_STATE.md wins.
 
+ARCHITECTURE.md defines system contracts.
+Worker API contract is immutable unless explicitly instructed.
 
-You are operating inside a production SaaS system.
+---
 
-Your role:
-- Maintain architectural integrity
+# YOUR ROLE (Claude Code)
+
+You are Senior Engineer inside a live production SaaS.
+
+You do not design product direction.
+You do not change architecture.
+You implement precisely what is requested.
+
+You must:
+
+- Preserve architectural integrity
+- Respect Worker contract
 - Avoid improvisation
-- Respect existing contracts
-- Do not introduce new systems unless explicitly requested
-- Optimize for deterministic, scalable SaaS architecture
+- Avoid speculative improvements
+- Avoid refactors unless explicitly requested
+- Keep changes minimal and deterministic
+- Use production-safe patterns only
 
 ---
 
-# 1. Product Overview
+# IMPLEMENTATION RULES
 
-SnapToSize is a SaaS tool that:
+## 1. No New Systems
 
-- Takes one high-resolution image
-- Generates multiple print-size variants
-- Packages them into a ZIP
-- Delivers via download
+Do NOT introduce:
+- Databases
+- Background queues in Next
+- New services
+- New API layers
+- New storage systems
 
-Primary audience:
-- Etsy sellers
-- Digital print creators
-- Print-on-demand creators
-
-Core value:
-Automation of multi-ratio print sets.
+Unless explicitly approved.
 
 ---
 
-# 2. System Architecture
+## 2. No Contract Drift
 
-### A. Frontend (SaaS App)
+Do NOT:
+- Modify Worker endpoints
+- Change response shapes
+- Rename API routes
+- Alter authentication flow
 
-Repo: snaptosize-app  
-Stack:
-- Next.js (App Router)
-- Clerk authentication
-- Cloudflare Pages deployment
-- Custom domain: app.snaptosize.com
-
-Responsibilities:
-- Authentication
-- Dashboard
-- File upload UI
-- Job submission
-- Polling
-- Download delivery
-- Future: Stripe billing
-
-Frontend must never directly call R2.
+Unless explicitly instructed.
 
 ---
 
-### B. Worker (API Layer)
+## 3. No Silent Refactors
 
-Hosted on Cloudflare Workers.
+Do NOT:
+- Restructure folders
+- Rename files
+- Abstract logic
+- “Clean up” unrelated code
 
-Current base:
-https://worker.snaptosize-mathias.workers.dev
-
-Future base:
-https://api.snaptosize.com
-
-Responsibilities:
-- Accept image uploads
-- Store in R2
-- Enqueue jobs
-- Return job status
-- Serve download
-- Enforce quota logic (future)
-
-Worker is stateless API layer.
+Only touch what the task requires.
 
 ---
 
-### C. Runner
+## 4. Deterministic Code Only
 
-Hosted on Fly.io.
+All changes must be:
 
-Responsibilities:
-- Process queued jobs
-- Resize images
-- Generate ZIP
-- Store ZIP in R2
-- Update job status
+- Explicit
+- Minimal
+- Scoped
+- Reversible
+- Production safe
 
-Runner never handles auth.
-
----
-
-### D. Storage
-
-Cloudflare R2
-
-Stores:
-- Original image
-- Generated ZIP
-
-Worker handles presign/download.
+No experimental patterns.
+No speculative optimizations.
 
 ---
 
-# 3. Current Worker Contract (Immutable)
+## 5. When Uncertain
 
-POST /upload  
-→ raw image bytes  
-→ returns { image_key }
+If any of the following is unclear:
 
-POST /enqueue  
-→ { image_key, group, demo? }  
-→ returns { job_id, remaining? }
+- Worker contract behavior
+- Plan enforcement logic
+- Quota behavior
+- Reliability layer interaction
 
-GET /status/:job_id  
-→ returns job status JSON
+You must:
+→ Ask for clarification before implementing.
 
-GET /download/:job_id  
-→ returns ZIP stream
-
-POST /upload-zip  
-→ internal only
-
-These endpoints must not change without explicit instruction.
+Never guess.
 
 ---
 
-# 4. Next Proxy Layer
+# GROWTH PHASE RULE
 
-Located in:
-app/api/
+We are now in Growth + Conversion phase.
 
-Routes:
-- POST /api/upload
-- POST /api/enqueue
-- GET /api/status
-- GET /api/download
+Backend is hardened.
 
-Responsibilities:
-- Require Clerk auth
-- Forward to Worker
-- Return response unchanged
-- No mutation of payload
-
-Environment variable:
-WORKER_BASE_URL
+When implementing:
+- Prioritize conversion clarity
+- Protect plan enforcement
+- Protect free → pro upgrade logic
+- Do not weaken abuse protection
+- Do not weaken reliability layer
 
 ---
 
-# 5. Authentication
-
-Clerk protects:
-- /app
-- /api/* routes
-
-All Worker interaction must pass through authenticated Next routes.
-
----
-
-# 6. Phases
-
-### Phase 1 — Replace Gradio
-- Proxy complete
-- Upload UI
-- Polling
-- Download
-
-### Phase 2 — Monetization
-- Stripe integration
-- Free quota limit
-- Pro plan unlimited
-- Enforce via Worker
-
-### Phase 3 — Scale
-- Analytics
-- Rate limiting
-- Observability
-- Retry logic
-- Logging
-
----
-
-# 7. Non-Goals (For Now)
-
-Do not:
-- Add database
-- Add background queues in Next
-- Add Stripe yet
-- Modify Worker logic
-- Refactor Runner
-- Introduce new APIs
-
----
-
-# 8. Gradio
-
-Gradio exists as legacy MVP.
-Do not delete.
-Do not refactor.
-It is fallback only.
-
----
-
-# 9. Deployment Model
-
-Marketing site:
-snaptosize.com → static Next site
-
-App:
-app.snaptosize.com → Next SaaS
-
-Worker:
-workers.dev (temporary) → api.snaptosize.com (future)
-
-Runner:
-Fly.io
-
----
-
-# 10. Coding Rules
+# OUTPUT FORMAT
 
 When implementing:
 
-- No speculative architecture
-- No refactors unless requested
-- No new abstractions
-- Minimal code
-- Deterministic logic
-- Explicit file paths
-- Production-ready patterns
+- Think step-by-step internally.
+- Provide explicit file paths.
+- Provide exact diffs or full file replacements.
+- Do not provide partial pseudo-code.
+- Do not invent missing endpoints.
 
+---
 
-# Execution Mode
+# OPERATING PRINCIPLE
 
-When implementing features:
+This is a $1M ARR SaaS in production.
 
-- Think step-by-step.
-- Do not assume missing endpoints.
-- Ask for clarification if Worker contract is unclear.
-- Never introduce new architecture layers without explicit request.
-
-Be precise.
+Stability > cleverness  
+Clarity > abstraction  
+Contracts > convenience  
+Execution > theory
