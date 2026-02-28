@@ -10,7 +10,8 @@ export default clerkMiddleware(async (auth, req) => {
   // Handle POST to /app/billing - redirect to GET
   // Prevents 405 from Stripe checkout POST redirects
   if (req.method === "POST" && req.nextUrl.pathname === "/app/billing") {
-    return NextResponse.redirect(req.nextUrl, 303);
+    const url = new URL(req.url);
+    return NextResponse.redirect(url.toString(), 303);
   }
 
   if (isProtectedRoute(req)) await auth.protect();
