@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher([
   "/app/billing(.*)",
@@ -6,6 +7,12 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // Handle POST to /app/billing - redirect to GET
+  // Prevents 405 from Stripe checkout POST redirects
+  if (req.method === "POST" && req.nextUrl.pathname === "/app/billing") {
+    return NextResponse.redirect(req.nextUrl, 303);
+  }
+
   if (isProtectedRoute(req)) await auth.protect();
 });
 
