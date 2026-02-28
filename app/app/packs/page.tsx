@@ -473,9 +473,12 @@ export default function AppPage() {
           {/* Recent Downloads */}
           {state.recentDownloads.length > 0 && (
             <div className="rounded-xl border border-border bg-surface px-4 py-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/50">
+              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground/50">
                 Recent Downloads
               </h3>
+              <p className="mb-3 text-xs text-foreground/30">
+                Visible until you refresh this page.
+              </p>
               <div className="space-y-2">
                 {state.recentDownloads.map((item) => (
                   <div
