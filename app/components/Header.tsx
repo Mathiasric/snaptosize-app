@@ -28,10 +28,10 @@ function PlanIndicator() {
 export function Header() {
   const { signOut } = useClerk();
 
-  const handleSignOut = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSignOut = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    await signOut({ redirectUrl: "/" });
+    void signOut({ redirectUrl: "/" });
   };
 
   return (
