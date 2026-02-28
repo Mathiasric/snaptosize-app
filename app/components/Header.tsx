@@ -66,7 +66,7 @@ export function Header() {
             Billing
           </Link>
           <SignOutButton signOutOptions={{ redirectUrl: "/" }}>
-            <button className="rounded-full border border-border px-4 py-1.5 text-sm text-foreground/60 transition-colors hover:border-accent/40 hover:text-foreground">
+            <button type="button" className="rounded-full border border-border px-4 py-1.5 text-sm text-foreground/60 transition-colors hover:border-accent/40 hover:text-foreground">
               Sign out
             </button>
           </SignOutButton>
