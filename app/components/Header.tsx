@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
 
 function PlanIndicator() {
   const { user, isLoaded } = useUser();
@@ -26,6 +26,14 @@ function PlanIndicator() {
 }
 
 export function Header() {
+  const { signOut } = useClerk();
+
+  const handleSignOut = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await signOut({ redirectUrl: "/" });
+  };
+
   return (
     <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-3">
       <Link href="/" className="flex items-center gap-2.5">
@@ -65,11 +73,13 @@ export function Header() {
           >
             Billing
           </Link>
-          <SignOutButton signOutOptions={{ redirectUrl: "/" }}>
-            <button type="button" className="rounded-full border border-border px-4 py-1.5 text-sm text-foreground/60 transition-colors hover:border-accent/40 hover:text-foreground">
-              Sign out
-            </button>
-          </SignOutButton>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded-full border border-border px-4 py-1.5 text-sm text-foreground/60 transition-colors hover:border-accent/40 hover:text-foreground"
+          >
+            Sign out
+          </button>
         </SignedIn>
       </nav>
     </header>
