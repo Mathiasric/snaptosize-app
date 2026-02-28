@@ -38,6 +38,13 @@ interface JobInfo {
   error?: string;
 }
 
+interface RecentDownload {
+  label: string;
+  completedAt: number;
+  downloadUrl: string;
+  jobId: string;
+}
+
 interface State {
   phase: Phase;
   file: File | null;
@@ -47,6 +54,7 @@ interface State {
   imageKey?: string;
   job?: JobInfo;
   globalError?: string;
+  recentDownloads: RecentDownload[];
 }
 
 type Action =
@@ -58,6 +66,7 @@ type Action =
   | { type: "set_image_key"; imageKey: string }
   | { type: "set_job"; job: JobInfo }
   | { type: "set_global_error"; error: string }
+  | { type: "add_recent_download"; download: RecentDownload }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -76,6 +85,7 @@ const INITIAL_STATE: State = {
   imageKey: undefined,
   job: undefined,
   globalError: undefined,
+  recentDownloads: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -111,6 +121,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, job: action.job };
     case "set_global_error":
       return { ...state, globalError: action.error, phase: "error" };
+    case "add_recent_download": {
+      const updated = [action.download, ...state.recentDownloads].slice(0, 5);
+      return { ...state, recentDownloads: updated };
+    }
     case "reset":
       return {
         ...INITIAL_STATE,
@@ -118,6 +132,7 @@ function reducer(state: State, action: Action): State {
         group: state.group,
         orientation: state.orientation,
         sizeId: state.sizeId,
+        recentDownloads: state.recentDownloads,
       };
     default:
       return state;
@@ -134,6 +149,17 @@ function isDone(data: Record<string, unknown>): boolean {
 
 function isError(data: Record<string, unknown>): boolean {
   return data.state === "error" || data.status === "error";
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "Just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +184,7 @@ export default function QuickExportPage() {
     state.phase === "polling";
 
   // ---- Poll single job ----
-  async function pollJob(jobId: string, signal: AbortSignal) {
+  async function pollJob(jobId: string, sizeLabel: string, signal: AbortSignal) {
     const start = Date.now();
     const timeoutMs = 3 * 60 * 1000;
 
@@ -191,6 +217,16 @@ export default function QuickExportPage() {
         dispatch({
           type: "set_job",
           job: { jobId, status: "done", downloadUrl },
+        });
+        // Add to recent downloads
+        dispatch({
+          type: "add_recent_download",
+          download: {
+            label: sizeLabel,
+            completedAt: Date.now(),
+            downloadUrl,
+            jobId,
+          },
         });
         dispatch({ type: "set_phase", phase: "done" });
         return;
@@ -310,7 +346,10 @@ export default function QuickExportPage() {
 
       // Poll
       dispatch({ type: "set_phase", phase: "polling" });
-      await pollJob(jobId, ac.signal);
+      const sizeLabel = selectedSize
+        ? getSizeLabel(selectedSize, state.orientation)
+        : state.sizeId;
+      await pollJob(jobId, sizeLabel, ac.signal);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : String(err);
@@ -520,6 +559,41 @@ export default function QuickExportPage() {
                     </li>
                   </ul>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Downloads */}
+          {state.recentDownloads.length > 0 && (
+            <div className="rounded-xl border border-border bg-surface px-4 py-4">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/50">
+                Recent Downloads
+              </h3>
+              <div className="space-y-2">
+                {state.recentDownloads.map((item) => (
+                  <div
+                    key={item.jobId}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/50 px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {item.label}
+                      </p>
+                      <p className="text-xs text-foreground/40">
+                        {formatRelativeTime(item.completedAt)}
+                      </p>
+                    </div>
+                    <a
+                      href={item.downloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-semibold text-success transition-colors hover:bg-success/25"
+                    >
+                      <Download size={14} />
+                      Download
+                    </a>
+                  </div>
+                ))}
               </div>
             </div>
           )}

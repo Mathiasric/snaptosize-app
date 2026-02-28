@@ -3,18 +3,25 @@
 import { useMemo, useReducer, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { UploadZone } from "../components/UploadZone";
-import { PackSelector, ALL_KEYS } from "../components/PackSelector";
+import { PackSelector, ALL_KEYS, PACKS } from "../components/PackSelector";
 import type { Group } from "../components/PackSelector";
 import { JobCard } from "../components/JobCard";
 import type { Job, JobStatus } from "../components/JobCard";
 import { GenerateButton } from "../components/GenerateButton";
-import { XCircle, FolderDown, Check } from "lucide-react";
+import { XCircle, FolderDown, Check, Download, Clock as ClockIcon } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 type Phase = "idle" | "uploading" | "enqueuing" | "polling" | "done" | "error";
+
+interface RecentDownload {
+  label: string;
+  completedAt: number;
+  downloadUrl: string;
+  jobId: string;
+}
 
 type State = {
   phase: Phase;
@@ -23,6 +30,7 @@ type State = {
   imageKey?: string;
   jobs: Partial<Record<Group, Job>>;
   globalError?: string;
+  recentDownloads: RecentDownload[];
 };
 
 type Action =
@@ -33,6 +41,7 @@ type Action =
   | { type: "set_image_key"; imageKey: string }
   | { type: "set_job"; job: Job }
   | { type: "set_global_error"; error: string }
+  | { type: "add_recent_download"; download: RecentDownload }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -53,6 +62,7 @@ const INITIAL_STATE: State = {
   selected: { ...INIT_SELECTED },
   jobs: {},
   globalError: undefined,
+  recentDownloads: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -78,8 +88,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, jobs: { ...state.jobs, [action.job.group]: action.job } };
     case "set_global_error":
       return { ...state, globalError: action.error, phase: "error" };
+    case "add_recent_download": {
+      const updated = [action.download, ...state.recentDownloads].slice(0, 5);
+      return { ...state, recentDownloads: updated };
+    }
     case "reset":
-      return { ...INITIAL_STATE, file: state.file, selected: state.selected };
+      return { ...INITIAL_STATE, file: state.file, selected: state.selected, recentDownloads: state.recentDownloads };
     default:
       return state;
   }
@@ -103,6 +117,17 @@ function isDone(data: Record<string, unknown>): boolean {
 
 function isError(data: Record<string, unknown>): boolean {
   return data.state === "error" || data.status === "error";
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "Just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,6 +201,17 @@ export default function AppPage() {
           dispatch({
             type: "set_job",
             job: { group, jobId, status: "done" },
+          });
+          // Add to recent downloads
+          const pack = PACKS.find((p) => p.key === group);
+          dispatch({
+            type: "add_recent_download",
+            download: {
+              label: pack?.label ?? group,
+              completedAt: Date.now(),
+              downloadUrl: `/api/download?job_id=${encodeURIComponent(jobId)}`,
+              jobId,
+            },
           });
         } else if (isError(data)) {
           terminal.add(jobId);
@@ -430,6 +466,41 @@ export default function AppPage() {
                     </li>
                   </ul>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Downloads */}
+          {state.recentDownloads.length > 0 && (
+            <div className="rounded-xl border border-border bg-surface px-4 py-4">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/50">
+                Recent Downloads
+              </h3>
+              <div className="space-y-2">
+                {state.recentDownloads.map((item) => (
+                  <div
+                    key={item.jobId}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/50 px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {item.label}
+                      </p>
+                      <p className="text-xs text-foreground/40">
+                        {formatRelativeTime(item.completedAt)}
+                      </p>
+                    </div>
+                    <a
+                      href={item.downloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-semibold text-success transition-colors hover:bg-success/25"
+                    >
+                      <Download size={14} />
+                      Download
+                    </a>
+                  </div>
+                ))}
               </div>
             </div>
           )}
