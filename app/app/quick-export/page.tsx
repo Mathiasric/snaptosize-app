@@ -183,6 +183,11 @@ export default function QuickExportPage() {
     state.phase === "enqueuing" ||
     state.phase === "polling";
 
+  // Filter out current job from recent downloads to avoid duplication
+  const previousDownloads = state.recentDownloads.filter(
+    (item) => item.jobId !== state.job?.jobId
+  );
+
   // ---- Poll single job ----
   async function pollJob(jobId: string, sizeLabel: string, signal: AbortSignal) {
     const start = Date.now();
@@ -564,7 +569,7 @@ export default function QuickExportPage() {
           )}
 
           {/* Recent Downloads */}
-          {state.recentDownloads.length > 0 && (
+          {previousDownloads.length > 0 && (
             <div className="rounded-xl border border-border bg-surface px-4 py-4">
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground/50">
                 Recent Downloads
@@ -573,7 +578,7 @@ export default function QuickExportPage() {
                 Visible until you refresh this page.
               </p>
               <div className="space-y-2">
-                {state.recentDownloads.map((item) => (
+                {previousDownloads.map((item) => (
                   <div
                     key={item.jobId}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/50 px-3 py-2"

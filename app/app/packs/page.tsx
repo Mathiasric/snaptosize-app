@@ -353,6 +353,14 @@ export default function AppPage() {
 
   const hasJobs = Object.keys(state.jobs).length > 0;
 
+  // Filter out current jobs from recent downloads to avoid duplication
+  const currentJobIds = new Set(
+    Object.values(state.jobs).map((j) => j.jobId).filter(Boolean)
+  );
+  const previousDownloads = state.recentDownloads.filter(
+    (item) => !currentJobIds.has(item.jobId)
+  );
+
   return (
     <div className="min-h-screen px-4 pb-16 pt-8">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
@@ -471,7 +479,7 @@ export default function AppPage() {
           )}
 
           {/* Recent Downloads */}
-          {state.recentDownloads.length > 0 && (
+          {previousDownloads.length > 0 && (
             <div className="rounded-xl border border-border bg-surface px-4 py-4">
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground/50">
                 Recent Downloads
@@ -480,7 +488,7 @@ export default function AppPage() {
                 Visible until you refresh this page.
               </p>
               <div className="space-y-2">
-                {state.recentDownloads.map((item) => (
+                {previousDownloads.map((item) => (
                   <div
                     key={item.jobId}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/50 px-3 py-2"
