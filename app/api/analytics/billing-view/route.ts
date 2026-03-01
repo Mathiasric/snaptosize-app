@@ -37,5 +37,9 @@ export async function POST(req: Request) {
     });
   }
 
-  return Response.json({ ok: true });
+  return Response.json({
+    ok: true,
+    posthog_host: process.env.POSTHOG_HOST ?? null,
+    has_posthog_key: !!process.env.POSTHOG_API_KEY,
+  });
 }
