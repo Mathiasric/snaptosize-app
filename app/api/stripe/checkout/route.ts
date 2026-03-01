@@ -15,9 +15,13 @@ export async function POST(req: Request) {
   const user = await currentUser();
   const email = user?.emailAddresses?.[0]?.emailAddress;
 
-  const { interval } = (await req.json().catch(() => ({}))) as {
+  const { interval, source, kind } = (await req.json().catch(() => ({}))) as {
     interval?: "monthly" | "yearly";
+    source?: string;
+    kind?: string;
   };
+
+  const plan_before = (user?.publicMetadata as { plan?: string } | undefined)?.plan || "free";
 
   const priceMonthly = process.env.PRICE_ID_PRO_MONTHLY;
   const priceYearly = process.env.PRICE_ID_PRO_YEARLY;
@@ -33,12 +37,17 @@ export async function POST(req: Request) {
     success_url: `${appUrl}/app/billing?success=1`,
     cancel_url: `${appUrl}/app/billing?canceled=1`,
     client_reference_id: userId,
-    metadata: { userId },
+    metadata: { userId, ...(source ? { source } : {}), ...(kind ? { kind } : {}) },
     subscription_data: { metadata: { userId } },
     ...(email ? { customer_email: email } : {}),
   });
 
-  posthogCapture(userId, "checkout_started", { interval: interval || "monthly" });
+  posthogCapture(`clerk:${userId}`, "checkout_started", {
+    interval: interval || "monthly",
+    source: source || null,
+    kind: kind || null,
+    plan_before,
+  });
 
   return Response.json({ url: session.url });
 }

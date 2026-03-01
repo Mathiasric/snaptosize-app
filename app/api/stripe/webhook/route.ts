@@ -50,7 +50,23 @@ export async function POST(req: Request) {
       if (!userId) break;
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       await updatePlan(userId, "pro", customerId);
-      posthogCapture(userId, "checkout_completed", {});
+      const subId = typeof session.subscription === "string" ? session.subscription : undefined;
+      let interval: string | undefined;
+      let priceId: string | undefined;
+      if (subId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          interval = sub.items.data[0]?.price?.recurring?.interval;
+          priceId = sub.items.data[0]?.price?.id;
+        } catch {}
+      }
+      posthogCapture(`clerk:${userId}`, "checkout_completed", {
+        source: session.metadata?.source || null,
+        kind: session.metadata?.kind || null,
+        interval: interval || null,
+        price_id: priceId || null,
+        plan_after: "pro",
+      });
       break;
     }
 
@@ -61,7 +77,12 @@ export async function POST(req: Request) {
       const activeStatuses = ["active", "trialing", "past_due"];
       const active = activeStatuses.includes(sub.status);
       const custId = typeof sub.customer === "string" ? sub.customer : undefined;
-      await updatePlan(userId, active ? "pro" : "free", custId);
+      const plan_after = active ? "pro" : "free";
+      await updatePlan(userId, plan_after, custId);
+      posthogCapture(`clerk:${userId}`, "subscription_updated", {
+        status: sub.status,
+        plan_after,
+      });
       break;
     }
 
@@ -70,6 +91,10 @@ export async function POST(req: Request) {
       const userId = sub.metadata?.userId;
       if (!userId) break;
       await updatePlan(userId, "free");
+      posthogCapture(`clerk:${userId}`, "subscription_deleted", {
+        status: sub.status,
+        plan_after: "free",
+      });
       break;
     }
     }

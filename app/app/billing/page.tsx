@@ -25,6 +25,21 @@ function BillingContent() {
     return () => window.removeEventListener("focus", reset);
   }, []);
 
+  // Fire-and-forget billing analytics
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+    fetch("/api/analytics/billing-view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: source || undefined,
+        kind: kind || undefined,
+        success,
+        canceled,
+      }),
+    }).catch(() => {});
+  }, [isLoaded, user, source, kind, success, canceled]);
+
   async function checkout(interval: "monthly" | "yearly") {
     setLoading(interval);
     setActionError(null);
@@ -32,7 +47,7 @@ function BillingContent() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interval }),
+        body: JSON.stringify({ interval, source: source || undefined, kind: kind || undefined }),
       });
       if (!res.ok) throw new Error("Checkout failed. Please try again.");
       const { url } = await res.json();
