@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { AlertTriangle, CheckCircle2, XCircle, Crown, Loader, Sparkles } from "lucide-react";
@@ -18,6 +18,12 @@ function BillingContent() {
 
   const [loading, setLoading] = useState<"monthly" | "yearly" | "portal" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reset = () => setLoading(null);
+    window.addEventListener("focus", reset);
+    return () => window.removeEventListener("focus", reset);
+  }, []);
 
   async function checkout(interval: "monthly" | "yearly") {
     setLoading(interval);
