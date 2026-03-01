@@ -54,6 +54,24 @@ Cloudflare Pages now requires:
 
 ---
 
+## Cloudflare Pages Constraint (App Router POST Limitation)
+
+SnapToSize frontend runs on Cloudflare Pages (static prerender).
+
+Constraint:
+- POST requests to /app/* routes return 405 by default.
+- Next.js Server Actions (including Clerk invalidateCacheAction) POST to current route.
+- Middleware does NOT execute for prerendered static responses on Pages.
+
+Workaround (Production):
+- Server Action POSTs with `next-action` header are intercepted at edge level.
+- Response: 200 with `content-type: text/x-component` and no-op RSC flight body.
+- Prevents Clerk auth state changes from failing on static routes.
+
+Important:
+SnapToSize frontend assumes static hosting.
+Server Actions must never be relied upon for critical functionality.
+
 # 3. Backend Status (PRODUCTION READY)
 
 ## 3.1 Etsy Pack System
@@ -173,6 +191,48 @@ Events are:
 - Requires POSTHOG_API_KEY secret in Worker
 
 Analytics is production-safe and verified live.
+
+### Next.js App Events (Server-Side)
+
+Next.js app emits events via server-side PostHog wrapper (`app/lib/posthog.ts`).
+
+All use `distinct_id = clerk:{userId}` to match Worker format.
+
+Events:
+
+- **billing_view** — every billing page render
+  - Properties: source, kind, success, canceled, plan_before
+  - File: `app/api/analytics/billing-view/route.ts`
+
+- **upgrade_clicked** — billing page opened with `?source=` param
+  - Properties: source, kind, entry, plan_before
+  - File: `app/api/analytics/billing-view/route.ts`
+
+- **checkout_started** — Stripe checkout session created
+  - Properties: interval, source, kind, plan_before
+  - File: `app/api/stripe/checkout/route.ts`
+
+- **checkout_completed** — Stripe webhook confirms payment
+  - Properties: source, kind, interval, price_id, plan_after
+  - File: `app/api/stripe/webhook/route.ts`
+
+- **portal_opened** — Stripe billing portal opened
+  - Properties: (none)
+  - File: `app/api/stripe/portal/route.ts`
+
+- **subscription_updated** — Stripe subscription status change
+  - Properties: status, plan_after
+  - File: `app/api/stripe/webhook/route.ts`
+
+- **subscription_deleted** — Stripe subscription canceled
+  - Properties: status, plan_after
+  - File: `app/api/stripe/webhook/route.ts`
+
+Attribution chain:
+- Upgrade links pass `?source=` and `?kind=` to billing page
+- Billing page forwards source/kind to checkout POST body
+- Checkout route writes source/kind into Stripe session metadata
+- Webhook reads session.metadata.source/kind into checkout_completed
 
 # 4. Free vs Pro System (LIVE)
 
@@ -325,8 +385,9 @@ Core + monetization + protection base working.
 
 # 8. What Is NOT Built Yet
 
-- Subscription lifecycle UX polish (cancel_at_period_end display)
-- Analytics
+- Subscription lifecycle UX polish (cancel_at_period_end display, portal clarity)
+- Client-side funnel tracking on marketing site (landing → app click attribution)
+- Growth content layer (SEO guides + landing pages)
 
 ---
 
@@ -572,14 +633,7 @@ Differentiators unchanged.
 
 ## Immediate Next Step
 
-1. Marketing layer upgrade (snaptosize.com redesign)
-   - Align visual identity with app.snaptosize.com
-   - Clean premium SaaS design (minimal, structured, confident)
-   - Add real product screenshots / flow visuals
-   - Clear positioning: Etsy-native print pack generator
-   - Strong CTA: Start free → app.snaptosize.com
-   - Structured pricing section
-   - FAQ addressing Etsy sellers’ real concerns
+# In "Immediate Next Step", add one bullet under "Conversion architecture":
 
 2. Conversion architecture
    - Ensure clean separation:
@@ -587,11 +641,7 @@ Differentiators unchanged.
      app.snaptosize.com → product
    - No embedding of app inside marketing
    - Clear upgrade path
-
-3. Core funnel dashboard in PostHog
-   - Funnel: enqueue_success → job_done → download_clicked
-   - Breakdown by plan and mode
-   - Monitor job_error rate
+   - Add landing → app attribution (UTM + PostHog event)
 
 ## Phase 3: Hardening
 
@@ -618,6 +668,97 @@ Differentiators unchanged.
 # 12. Current System Status
 
 Core engine + billing + reliability + abuse protection complete.
+
+# 13. Growth System (ACTIVE PHASE)
+
+## 13.1 Ideal Customer Profile (Locked)
+
+Primary ICP:
+- Etsy sellers selling DIGITAL wall art / printables
+- 10–200 listings OR consistent sales history
+- Already earns > $500/mo (not beginners)
+- Pain: resizing, packaging, naming, Etsy upload compliance
+
+Secondary ICP:
+- POD creators scaling listing count
+- Bundle sellers needing consistent size sets
+
+Not targeting (by default):
+- Hobby/one-off Canva users
+- Generic “image resizer” traffic
+- People who don’t sell on Etsy
+
+## 13.2 North Star Metric (Locked)
+
+Primary:
+- Weekly Pro activations (count)
+
+Secondary:
+- Free → Pro conversion rate
+- Time-to-first-export (TTFE)
+- Upgrade click rate after 402
+- Job success rate (error %)
+
+Targets (initial):
+- Free → Pro conversion ≥ 7% (minimum viable)
+- Free → Pro conversion ≥ 10% (goal)
+- TTFE ≤ 60 seconds median
+- Job success rate ≥ 99%
+
+## 13.3 Funnel Definition (Must be tracked)
+
+Landing → App click
+App → First export
+First export → Upgrade click
+Upgrade click → Checkout started
+Checkout started → Checkout completed
+
+Implementation rule:
+- Every step is a PostHog event with consistent naming + properties (plan, mode, group).
+
+## 13.4 Marketing Execution Channels (3 lanes)
+
+Lane A — SEO content engine:
+- Print size guides (ratios + exact Etsy sizes)
+- “How to sell printables on Etsy” content
+- Size/ratio calculators (lead capture)
+- Long-tail keyword capture
+
+Lane B — Etsy-native positioning:
+- Messaging: “Built for Etsy sellers”
+- Emphasize: exact ratios + naming + zip packs + no cropping + under 20MB compliance
+
+Lane C — Direct niche distribution:
+- Reddit: Etsy sellers subreddits
+- Facebook groups (digital downloads / printables)
+- Pinterest (printable audience)
+- IndieHackers / build-in-public
+
+## 13.5 Conversion Optimization (Planned experiments)
+
+- Show free remaining counts (quick + packs)
+- Inline upsell after 402 (one-click to billing)
+- Watermark preview + “Remove watermark” CTA
+- Annual plan highlight + anchor pricing
+- Checkout abandonment tracking
+- Exit-intent paywall on billing
+
+## 13.6 Revenue Tracking (Stripe source of truth)
+
+Track weekly:
+- MRR
+- Net revenue
+- Pro activations
+- Churn
+- Annual vs monthly split
+
+Milestone path:
+- 10 paying users → validate willingness
+- 100 paying users → validate retention + pricing
+- 500 paying users → prove growth engine
+- 1000+ paying users → scale distribution
+
+---
 
 ## Next Major Build
 
