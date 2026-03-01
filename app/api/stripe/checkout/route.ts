@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     ...(email ? { customer_email: email } : {}),
   });
 
-  posthogCapture(`clerk:${userId}`, "checkout_started", {
+  await posthogCapture(`clerk:${userId}`, "checkout_started", {
     interval: interval || "monthly",
     source: source || null,
     kind: kind || null,

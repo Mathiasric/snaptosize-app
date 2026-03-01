@@ -60,7 +60,7 @@ export async function POST(req: Request) {
           priceId = sub.items.data[0]?.price?.id;
         } catch {}
       }
-      posthogCapture(`clerk:${userId}`, "checkout_completed", {
+      await posthogCapture(`clerk:${userId}`, "checkout_completed", {
         source: session.metadata?.source || null,
         kind: session.metadata?.kind || null,
         interval: interval || null,
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       const custId = typeof sub.customer === "string" ? sub.customer : undefined;
       const plan_after = active ? "pro" : "free";
       await updatePlan(userId, plan_after, custId);
-      posthogCapture(`clerk:${userId}`, "subscription_updated", {
+      await posthogCapture(`clerk:${userId}`, "subscription_updated", {
         status: sub.status,
         plan_after,
       });
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       const userId = sub.metadata?.userId;
       if (!userId) break;
       await updatePlan(userId, "free");
-      posthogCapture(`clerk:${userId}`, "subscription_deleted", {
+      await posthogCapture(`clerk:${userId}`, "subscription_deleted", {
         status: sub.status,
         plan_after: "free",
       });

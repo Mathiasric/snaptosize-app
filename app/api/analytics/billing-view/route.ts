@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const distinctId = `clerk:${userId}`;
 
   // Always track billing page view
-  posthogCapture(distinctId, "billing_view", {
+  await posthogCapture(distinctId, "billing_view", {
     source: source || null,
     kind: kind || null,
     success: success || false,
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   // Track upgrade_clicked only when arriving from a specific source
   if (source) {
-    posthogCapture(distinctId, "upgrade_clicked", {
+    await posthogCapture(distinctId, "upgrade_clicked", {
       source,
       kind: kind || null,
       entry: "billing_page",
