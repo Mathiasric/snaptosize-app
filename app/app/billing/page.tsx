@@ -65,7 +65,9 @@ function BillingContent() {
     try {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
       if (!res.ok) throw new Error("Couldn\u2019t open billing portal. Try again.");
-      const { url } = await res.json();
+      const data = await res.json();
+      console.log("PORTAL DEBUG:", data);
+      const { url } = data;
       if (!url) throw new Error("No portal URL returned.");
       window.location.href = url;
     } catch (e) {
