@@ -400,15 +400,15 @@ export default function AppPage() {
             {/* Inline error under generate */}
             {state.globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
               <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">Upgrade to Pro</p>
+                <p className="text-sm font-semibold text-foreground">You&apos;ve reached today&apos;s free limit.</p>
                 <p className="mt-1 text-xs text-foreground/50">
-                  You&apos;ve used today&apos;s 1 free ZIP pack. Upgrade for unlimited packs.
+                  Unlock unlimited exports, all ZIP packs, and watermark-free downloads.
                 </p>
                 <a
                   href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"
                   className="gradient-btn mt-2 inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
                 >
-                  Upgrade to Pro
+                  Unlock Pro
                 </a>
               </div>
             ) : state.globalError ? (

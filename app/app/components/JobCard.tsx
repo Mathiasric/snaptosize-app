@@ -141,14 +141,14 @@ export function JobCard({ group, job, onRetry }: JobCardProps) {
       {job.status === "locked" && (
         <div className="mt-3">
           <p className="mb-2 text-xs text-foreground/40">
-            Free limit: 1 ZIP per run. Upgrade to generate multiple packs at once.
+            You&apos;ve reached today&apos;s free limit. Unlock unlimited packs.
           </p>
           <a
             href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"
             className="gradient-btn inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white"
           >
             <Lock size={14} />
-            Upgrade to Pro
+            Unlock Pro
           </a>
         </div>
       )}

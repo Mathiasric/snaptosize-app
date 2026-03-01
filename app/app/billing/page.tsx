@@ -77,9 +77,9 @@ function BillingContent() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Billing</h1>
+        <h1 className="text-xl font-bold text-foreground">Unlock Unlimited Exports</h1>
         <p className="mt-1 text-sm text-foreground/40">
-          Manage your SnapToSize subscription.
+          Go Pro to remove limits and export without watermarks.
         </p>
       </div>
 
@@ -185,9 +185,9 @@ function BillingContent() {
       {/* Upgrade cards — only show if not Pro */}
       {isLoaded && !isPro && (
         <div className="space-y-3">
-          {/* Monthly */}
+          {/* Yearly — primary */}
           <button
-            onClick={() => checkout("monthly")}
+            onClick={() => checkout("yearly")}
             disabled={loading !== null}
             className="group relative w-full rounded-xl border border-accent/30 bg-surface p-5 text-left transition-colors hover:border-accent/50"
           >
@@ -196,28 +196,34 @@ function BillingContent() {
                 <div className="flex items-center gap-2">
                   <Sparkles size={14} className="text-accent-light" />
                   <span className="text-sm font-semibold text-foreground">
-                    Pro Monthly
+                    Pro Yearly
+                  </span>
+                  <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                    Best value
+                  </span>
+                  <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                    Save 33%
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-foreground/40">
-                  Unlimited ZIP packs &amp; quick exports. Cancel anytime.
+                  $97 / year &mdash; $8.08 / month, billed annually. Cancel anytime.
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                {loading === "monthly" ? (
+                {loading === "yearly" ? (
                   <Loader size={16} className="animate-spin text-accent-light" />
                 ) : (
                   <span className="gradient-btn inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white">
-                    Upgrade
+                    Go Pro — Save 33%
                   </span>
                 )}
               </div>
             </div>
           </button>
 
-          {/* Yearly */}
+          {/* Monthly — secondary */}
           <button
-            onClick={() => checkout("yearly")}
+            onClick={() => checkout("monthly")}
             disabled={loading !== null}
             className="group relative w-full rounded-xl border border-border bg-surface p-5 text-left transition-colors hover:border-accent/30"
           >
@@ -226,22 +232,19 @@ function BillingContent() {
                 <div className="flex items-center gap-2">
                   <Sparkles size={14} className="text-foreground/30" />
                   <span className="text-sm font-semibold text-foreground">
-                    Pro Yearly
-                  </span>
-                  <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                    Save 33%
+                    Pro Monthly
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-foreground/40">
-                  Best value. Billed annually. Cancel anytime.
+                  $11.99 / month. Cancel anytime.
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                {loading === "yearly" ? (
+                {loading === "monthly" ? (
                   <Loader size={16} className="animate-spin text-accent-light" />
                 ) : (
                   <span className="inline-block rounded-lg border border-accent/30 px-4 py-1.5 text-xs font-semibold text-foreground/70">
-                    Upgrade
+                    Go Pro Monthly
                   </span>
                 )}
               </div>
