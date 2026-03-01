@@ -77,7 +77,7 @@ function BillingContent() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Unlock Unlimited Exports</h1>
+        <h1 className="text-xl font-bold text-foreground">Sell More Prints. Export Without Limits.</h1>
         <p className="mt-1 text-sm text-foreground/40">
           Go Pro to remove limits and export without watermarks.
         </p>
@@ -205,8 +205,11 @@ function BillingContent() {
                     Save 33%
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-foreground/40">
-                  $97 / year &mdash; $8.08 / month, billed annually. Cancel anytime.
+                <p className="mt-1 text-sm font-semibold text-foreground/70">
+                  $97 / year
+                </p>
+                <p className="mt-0.5 text-xs text-foreground/30">
+                  $8.08 per month, billed annually. Cancel anytime.
                 </p>
                 <p className="mt-0.5 text-xs text-foreground/30">
                   Most sellers choose Yearly
