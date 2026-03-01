@@ -10,7 +10,7 @@ export async function posthogCapture(
   if (!apiKey) return;
 
   try {
-    await fetch(`${host}/capture/`, {
+    const res = await fetch(`${host}/capture/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -19,6 +19,8 @@ export async function posthogCapture(
         properties: { distinct_id: distinctId, ...properties },
       }),
     });
+    console.log("POSTHOG STATUS:", res.status);
+    console.log("POSTHOG HOST:", host);
   } catch {
     // Fail silent
   }
