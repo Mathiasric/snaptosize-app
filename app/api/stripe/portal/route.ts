@@ -56,14 +56,7 @@ export async function POST() {
       plan_before,
       entry: "billing_manage_subscription",
     });
-    // Temporary debug fields — remove after verification
-    const body = JSON.stringify({
-      ok: true,
-      url: session.url,
-      has_posthog_key: !!process.env.POSTHOG_API_KEY,
-      distinct_id_used: distinctId,
-      plan_before,
-    });
+    const body = JSON.stringify({ url: session.url });
     return new Response(body, {
       status: 200,
       headers: { "Content-Type": "application/json" },
