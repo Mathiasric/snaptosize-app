@@ -214,6 +214,9 @@ function BillingContent() {
                 <p className="mt-0.5 text-xs text-foreground/30">
                   Most sellers choose Yearly
                 </p>
+                <p className="mt-0.5 text-xs text-foreground/20">
+                  VAT may apply based on your location.
+                </p>
               </div>
               <div className="shrink-0 text-right">
                 {loading === "yearly" ? (
@@ -243,6 +246,9 @@ function BillingContent() {
                 </div>
                 <p className="mt-1 text-xs text-foreground/40">
                   $11.99 / month. Cancel anytime.
+                </p>
+                <p className="mt-0.5 text-xs text-foreground/20">
+                  VAT may apply based on your location.
                 </p>
               </div>
               <div className="shrink-0 text-right">
