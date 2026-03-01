@@ -1,7 +1,7 @@
 # PROJECT_STATE.md  
 ## SnapToSize — Authoritative System State
 
-Last updated: 2026-02-24
+Last updated: 2026-03-01
 
 ---
 
@@ -217,7 +217,7 @@ Events:
   - File: `app/api/stripe/webhook/route.ts`
 
 - **portal_opened** — Stripe billing portal opened
-  - Properties: (none)
+  - Properties: plan_before, entry
   - File: `app/api/stripe/portal/route.ts`
 
 - **subscription_updated** — Stripe subscription status change
@@ -233,6 +233,13 @@ Attribution chain:
 - Billing page forwards source/kind to checkout POST body
 - Checkout route writes source/kind into Stripe session metadata
 - Webhook reads session.metadata.source/kind into checkout_completed
+
+Important implementation detail:
+- All posthogCapture() calls MUST be awaited on Cloudflare Pages edge runtime.
+- Without await, the edge worker terminates before the fetch completes and events are silently dropped.
+- This applies to all route handlers using `export const runtime = "edge"`.
+
+Verified live: 2026-03-01. All events confirmed in PostHog Activity.
 
 # 4. Free vs Pro System (LIVE)
 
@@ -631,17 +638,28 @@ Differentiators unchanged.
 
 # 10. Next Phase Roadmap
 
-## Immediate Next Step
+## Immediate Next Steps
 
-# In "Immediate Next Step", add one bullet under "Conversion architecture":
+1. PostHog dashboard setup (manual)
+   - Create "SnapToSize – Upgrade Attribution" dashboard in PostHog UI
+   - Add funnel: upgrade_clicked → checkout_started → checkout_completed
+   - Add trends: checkout_completed, upgrade_clicked, billing_view (daily by source)
 
-2. Conversion architecture
+2. Landing → App attribution (NOT YET BUILT)
+   - Add UTM param capture on marketing site (snaptosize.com)
+   - Pass UTM through to app signup flow
+   - Track landing_click event with UTM properties
+
+3. First export tracking (NOT YET BUILT)
+   - Correlate Worker enqueue_success with user's first-ever export
+   - Track first_export event with mode (pack/single)
+
+4. Conversion architecture
    - Ensure clean separation:
      snaptosize.com → marketing
      app.snaptosize.com → product
    - No embedding of app inside marketing
    - Clear upgrade path
-   - Add landing → app attribution (UTM + PostHog event)
 
 ## Phase 3: Hardening
 
@@ -667,7 +685,11 @@ Differentiators unchanged.
 
 # 12. Current System Status
 
-Core engine + billing + reliability + abuse protection complete.
+Core engine + billing + reliability + abuse protection + upgrade attribution tracking complete.
+
+Clerk production instance live (clerk.snaptosize.com).
+Stripe production checkout + portal + webhook verified.
+PostHog growth funnel events verified live (2026-03-01).
 
 # 13. Growth System (ACTIVE PHASE)
 
@@ -705,16 +727,28 @@ Targets (initial):
 - TTFE ≤ 60 seconds median
 - Job success rate ≥ 99%
 
-## 13.3 Funnel Definition (Must be tracked)
+## 13.3 Funnel Definition (Tracked — LIVE)
 
-Landing → App click
-App → First export
-First export → Upgrade click
-Upgrade click → Checkout started
-Checkout started → Checkout completed
+Full upgrade funnel tracked in PostHog (verified 2026-03-01):
+
+| Step | Event | Status |
+|------|-------|--------|
+| Billing page view | billing_view | LIVE |
+| Upgrade click | upgrade_clicked | LIVE |
+| Checkout started | checkout_started | LIVE |
+| Checkout completed | checkout_completed | LIVE |
+| Portal opened | portal_opened | LIVE |
+| Subscription changed | subscription_updated | LIVE |
+| Subscription canceled | subscription_deleted | LIVE |
+
+Not yet tracked:
+- Landing → App click (requires marketing site instrumentation)
+- App → First export (requires Worker event correlation)
+
+PostHog dashboard: "SnapToSize – Upgrade Attribution" (manual setup in PostHog UI).
 
 Implementation rule:
-- Every step is a PostHog event with consistent naming + properties (plan, mode, group).
+- Every step is a PostHog event with consistent distinct_id (clerk:{userId}) + properties (source, kind, plan_before/plan_after).
 
 ## 13.4 Marketing Execution Channels (3 lanes)
 
@@ -771,7 +805,7 @@ Scope:
 - SEO content layer (Etsy guides, print size resources)
 - Conversion copy optimization
 - Pricing experiments
-- Upgrade funnel tracking (checkout_started → checkout_completed)
+- ~~Upgrade funnel tracking (checkout_started → checkout_completed)~~ DONE (2026-03-01)
 - Stripe lifecycle UX polish (portal clarity, cancellation flow)
 - Revenue dashboard (MRR, Pro activation rate)
 
