@@ -50,8 +50,18 @@ export async function POST() {
       customer: customerId,
       return_url: `${appUrl}/app/billing?portal=1`,
     });
-    posthogCapture(`clerk:${userId}`, "portal_opened", {});
-    return Response.json({ url: session.url });
+    const distinctId = `clerk:${userId}`;
+    const plan_before = (user.publicMetadata as { plan?: string } | undefined)?.plan || "free";
+    posthogCapture(distinctId, "portal_opened", {
+      plan_before,
+      entry: "billing_manage_subscription",
+    });
+    // Temporary debug fields — remove after verification
+    return Response.json({
+      url: session.url,
+      has_posthog_key: !!process.env.POSTHOG_API_KEY,
+      distinct_id_used: distinctId,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return Response.json({ error: "Portal session failed", detail: msg }, { status: 500 });
