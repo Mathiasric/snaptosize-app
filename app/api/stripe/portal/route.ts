@@ -50,7 +50,7 @@ export async function POST() {
       customer: customerId,
       return_url: `${appUrl}/app/billing?portal=1`,
     });
-    posthogCapture(userId, "portal_opened", {});
+    posthogCapture(`clerk:${userId}`, "portal_opened", {});
     return Response.json({ url: session.url });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
