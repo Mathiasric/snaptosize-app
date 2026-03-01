@@ -1,13 +1,13 @@
-// Server-side PostHog capture (fail-silent)
+// Server-side PostHog capture — temporary debug version
 export async function posthogCapture(
   distinctId: string,
   event: string,
   properties?: Record<string, unknown>
-): Promise<void> {
+): Promise<{ status: number; body: string; host: string } | null> {
   const host = process.env.POSTHOG_HOST || "https://eu.posthog.com";
   const apiKey = process.env.POSTHOG_API_KEY;
 
-  if (!apiKey) return;
+  if (!apiKey) return null;
 
   const payload = {
     api_key: apiKey,
@@ -21,11 +21,9 @@ export async function posthogCapture(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    console.log("POSTHOG HOST:", host);
-    console.log("POSTHOG STATUS:", res.status);
-    const text = await res.text();
-    console.log("POSTHOG RESPONSE:", text);
-  } catch {
-    // Fail silent
+    const body = await res.text();
+    return { status: res.status, body, host };
+  } catch (err) {
+    return { status: 0, body: err instanceof Error ? err.message : "fetch failed", host };
   }
 }
