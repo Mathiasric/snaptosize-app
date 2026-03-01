@@ -208,6 +208,9 @@ function BillingContent() {
                 <p className="mt-1 text-xs text-foreground/40">
                   $97 / year &mdash; $8.08 / month, billed annually. Cancel anytime.
                 </p>
+                <p className="mt-0.5 text-xs text-foreground/30">
+                  Most sellers choose Yearly
+                </p>
               </div>
               <div className="shrink-0 text-right">
                 {loading === "yearly" ? (
