@@ -52,15 +52,21 @@ export async function POST() {
     });
     const distinctId = `clerk:${userId}`;
     const plan_before = (user.publicMetadata as { plan?: string } | undefined)?.plan || "free";
-    posthogCapture(distinctId, "portal_opened", {
+    await posthogCapture(distinctId, "portal_opened", {
       plan_before,
       entry: "billing_manage_subscription",
     });
     // Temporary debug fields — remove after verification
-    return Response.json({
+    const body = JSON.stringify({
+      ok: true,
       url: session.url,
       has_posthog_key: !!process.env.POSTHOG_API_KEY,
       distinct_id_used: distinctId,
+      plan_before,
+    });
+    return new Response(body, {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
