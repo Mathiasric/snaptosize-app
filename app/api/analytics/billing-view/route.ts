@@ -18,8 +18,8 @@ export async function POST(req: Request) {
   const plan_before = (user?.publicMetadata as { plan?: string } | undefined)?.plan || "free";
   const distinctId = `clerk:${userId}`;
 
-  // Track billing page view and capture PostHog response for debug
-  const phResult = await posthogCapture(distinctId, "billing_view", {
+  // Always track billing page view
+  posthogCapture(distinctId, "billing_view", {
     source: source || null,
     kind: kind || null,
     success: success || false,
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   // Track upgrade_clicked only when arriving from a specific source
   if (source) {
-    await posthogCapture(distinctId, "upgrade_clicked", {
+    posthogCapture(distinctId, "upgrade_clicked", {
       source,
       kind: kind || null,
       entry: "billing_page",
@@ -37,11 +37,5 @@ export async function POST(req: Request) {
     });
   }
 
-  return Response.json({
-    ok: true,
-    posthog_host: phResult?.host ?? null,
-    posthog_status: phResult?.status ?? "no_key",
-    posthog_body: phResult?.body ?? null,
-    has_posthog_key: !!process.env.POSTHOG_API_KEY,
-  });
+  return Response.json({ ok: true });
 }
