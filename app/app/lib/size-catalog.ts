@@ -126,8 +126,42 @@ export function getSizeLabel(entry: SizeEntry, orientation: Orientation): string
     return entry.label;
   }
   const { width, height } = getOrientedDimensions(entry, orientation);
+
+  // ISO sizes (A4, A3, etc.) - swap ID for landscape
   if (entry.id.startsWith("A")) {
     return `${entry.id} (${width}\u00d7${height})`;
   }
+
+  // Inch sizes - swap dimensions in label for landscape
+  if (orientation === "Landscape") {
+    // Parse original ID (e.g., "8x10" or "8.5x11")
+    const parts = entry.id.split("x");
+    if (parts.length === 2) {
+      // Swap: "8x10" → "10x8"
+      const swappedId = `${parts[1]}x${parts[0]}`;
+      return `${swappedId} in (${width}\u00d7${height})`;
+    }
+  }
+
+  // Portrait or failed parse - use original ID
   return `${entry.id} in (${width}\u00d7${height})`;
+}
+
+export function getGroupLabel(group: CatalogGroup, orientation: Orientation): string {
+  const groupDef = SIZE_CATALOG.find((g) => g.key === group);
+  if (!groupDef) return "";
+
+  // ISO and extras don't swap
+  if (group === "iso" || group === "extras") {
+    return groupDef.label;
+  }
+
+  // Swap ratio labels for landscape: "2×3" → "3×2"
+  if (orientation === "Landscape") {
+    if (group === "2x3") return "3\u00d72 Ratio";
+    if (group === "3x4") return "4\u00d73 Ratio";
+    if (group === "4x5") return "5\u00d74 Ratio";
+  }
+
+  return groupDef.label;
 }

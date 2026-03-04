@@ -21,6 +21,7 @@ import {
   SQUARE_SIZES,
   getSizesForGroup,
   getSizeLabel,
+  getGroupLabel,
 } from "../lib/size-catalog";
 import type { CatalogGroup, Orientation } from "../lib/size-catalog";
 
@@ -439,7 +440,7 @@ export default function QuickExportPage() {
                         : "border-border text-foreground/50 hover:border-foreground/20 hover:text-foreground/70"
                     } ${busy ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
                   >
-                    {g.label}
+                    {getGroupLabel(g.key, state.orientation)}
                   </button>
                 ))}
               </div>
