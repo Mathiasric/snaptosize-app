@@ -2,7 +2,10 @@ const { withSentryConfig } = require("@sentry/nextjs");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Your existing Next.js config options here
+  // Enable Sentry instrumentation
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
 module.exports = withSentryConfig(nextConfig, {
