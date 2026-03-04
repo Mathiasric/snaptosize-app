@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { clerkClient } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { posthogCapture } from "@/app/lib/posthog";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "edge";
 
@@ -26,23 +27,37 @@ export async function POST() {
     const email = user.emailAddresses?.[0]?.emailAddress;
     if (!email) return Response.json({ error: "No email on account" }, { status: 400 });
 
-    // Search existing Stripe customers by email
-    const existing = await stripe.customers.list({ email, limit: 1 });
-    if (existing.data.length > 0) {
-      customerId = existing.data[0].id;
-    } else {
-      const created = await stripe.customers.create({
-        email,
-        metadata: { userId },
-      });
-      customerId = created.id;
-    }
+    try {
+      // Search existing Stripe customers by email
+      const existing = await stripe.customers.list({ email, limit: 1 });
+      if (existing.data.length > 0) {
+        customerId = existing.data[0].id;
+      } else {
+        const created = await stripe.customers.create({
+          email,
+          metadata: { userId },
+        });
+        customerId = created.id;
+      }
 
-    // Persist for next time
-    const clerk = await clerkClient();
-    await clerk.users.updateUserMetadata(userId, {
-      privateMetadata: { stripeCustomerId: customerId },
-    });
+      // Persist for next time
+      const clerk = await clerkClient();
+      await clerk.users.updateUserMetadata(userId, {
+        privateMetadata: { stripeCustomerId: customerId },
+      });
+    } catch (err) {
+      // Report customer creation/lookup failure
+      Sentry.captureException(err, {
+        tags: {
+          user_id: userId,
+          error_type: "customer_creation_failed",
+        },
+        level: "error",
+      });
+
+      console.error("Customer creation/lookup failed:", err);
+      return Response.json({ error: "Customer creation failed" }, { status: 500 });
+    }
   }
 
   try {
@@ -62,6 +77,19 @@ export async function POST() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
+    // Report portal failure to Sentry
+    Sentry.captureException(err, {
+      tags: {
+        user_id: userId,
+      },
+      level: "error",
+      contexts: {
+        portal: {
+          customer_id: customerId,
+        },
+      },
+    });
+
     const msg = err instanceof Error ? err.message : "Unknown error";
     return Response.json({ error: "Portal session failed", detail: msg }, { status: 500 });
   }

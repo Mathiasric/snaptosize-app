@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { clerkClient } from "@clerk/nextjs/server";
 import { posthogCapture } from "@/app/lib/posthog";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "edge";
 
@@ -31,7 +32,12 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, secret);
-  } catch {
+  } catch (err) {
+    // Log signature validation failures (potential attack or misconfiguration)
+    Sentry.captureException(err, {
+      tags: { error_type: "webhook_signature_invalid" },
+      level: "warning",
+    });
     return Response.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -104,6 +110,22 @@ export async function POST(req: Request) {
       event_type: event.type,
       error: err instanceof Error ? err.message : String(err),
     });
+
+    // Report critical webhook failure to Sentry
+    Sentry.captureException(err, {
+      tags: {
+        event_type: event.type,
+        event_id: event.id,
+      },
+      level: "error",
+      contexts: {
+        webhook: {
+          event_type: event.type,
+          event_id: event.id,
+        },
+      },
+    });
+
     return Response.json({ error: "Processing failed" }, { status: 500 });
   }
 

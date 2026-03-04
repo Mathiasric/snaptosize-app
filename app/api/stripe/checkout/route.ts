@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { posthogCapture } from "@/app/lib/posthog";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "edge";
 
@@ -31,23 +32,44 @@ export async function POST(req: Request) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/app/billing?success=1`,
-    cancel_url: `${appUrl}/app/billing?canceled=1`,
-    client_reference_id: userId,
-    metadata: { userId, ...(source ? { source } : {}), ...(kind ? { kind } : {}) },
-    subscription_data: { metadata: { userId } },
-    ...(email ? { customer_email: email } : {}),
-  });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/app/billing?success=1`,
+      cancel_url: `${appUrl}/app/billing?canceled=1`,
+      client_reference_id: userId,
+      metadata: { userId, ...(source ? { source } : {}), ...(kind ? { kind } : {}) },
+      subscription_data: { metadata: { userId } },
+      ...(email ? { customer_email: email } : {}),
+    });
 
-  await posthogCapture(`clerk:${userId}`, "checkout_started", {
-    interval: interval || "monthly",
-    source: source || null,
-    kind: kind || null,
-    plan_before,
-  });
+    await posthogCapture(`clerk:${userId}`, "checkout_started", {
+      interval: interval || "monthly",
+      source: source || null,
+      kind: kind || null,
+      plan_before,
+    });
 
-  return Response.json({ url: session.url });
+    return Response.json({ url: session.url });
+  } catch (err) {
+    // Report checkout failure to Sentry
+    Sentry.captureException(err, {
+      tags: {
+        user_id: userId,
+        interval: interval || "monthly",
+      },
+      level: "error",
+      contexts: {
+        checkout: {
+          interval: interval || "monthly",
+          source: source || null,
+          plan_before,
+        },
+      },
+    });
+
+    console.error("Checkout session creation failed:", err);
+    return new Response("Checkout creation failed", { status: 500 });
+  }
 }
