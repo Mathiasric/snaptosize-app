@@ -31,6 +31,7 @@ type State = {
   jobs: Partial<Record<Group, Job>>;
   globalError?: string;
   recentDownloads: RecentDownload[];
+  remaining?: { quick: number; batch: number };
 };
 
 type Action =
@@ -42,6 +43,7 @@ type Action =
   | { type: "set_job"; job: Job }
   | { type: "set_global_error"; error: string }
   | { type: "add_recent_download"; download: RecentDownload }
+  | { type: "set_remaining"; remaining?: { quick: number; batch: number } }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -92,6 +94,8 @@ function reducer(state: State, action: Action): State {
       const updated = [action.download, ...state.recentDownloads].slice(0, 5);
       return { ...state, recentDownloads: updated };
     }
+    case "set_remaining":
+      return { ...state, remaining: action.remaining };
     case "reset":
       return { ...INITIAL_STATE, file: state.file, selected: state.selected, recentDownloads: state.recentDownloads };
     default:
@@ -328,6 +332,11 @@ export default function AppPage() {
           continue;
         }
 
+        // Store remaining quota if provided (free users only)
+        if (enqData?.remaining) {
+          dispatch({ type: "set_remaining", remaining: enqData.remaining });
+        }
+
         enqueued.push({ group, jobId });
         dispatch({ type: "set_job", job: { group, jobId, status: "queued" } });
       }
@@ -387,6 +396,15 @@ export default function AppPage() {
               loading={busy}
               onClick={generate}
             />
+
+            {/* Remaining packs badge (critical threshold only) */}
+            {!busy && !state.globalError && state.remaining && state.remaining.batch <= 1 && (
+              <p className="text-center text-xs font-medium">
+                <span className="gradient-btn inline-block rounded-full px-3 py-1">
+                  {state.remaining.batch} {state.remaining.batch === 1 ? 'pack' : 'packs'} remaining today
+                </span>
+              </p>
+            )}
 
             {/* Micro-copy: conversion trust signals */}
             {!busy && !state.globalError && (

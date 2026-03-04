@@ -124,9 +124,9 @@ function BillingContent() {
             </p>
             <p className="mt-0.5 text-xs text-foreground/50">
               {kind === "FREE_QUICK_LIMIT"
-                ? "You\u2019ve used all 3 free Quick Exports for today."
+                ? "You\u2019ve used all 5 free Quick Exports for today."
                 : kind === "FREE_BATCH_LIMIT"
-                  ? "You\u2019ve used your 1 free ZIP pack for today."
+                  ? "You\u2019ve used your 2 free ZIP packs for today."
                   : "Upgrade to Pro to continue without limits."}
             </p>
           </div>
@@ -155,7 +155,7 @@ function BillingContent() {
         )}
         {isLoaded && !isPro && (
           <p className="mt-1 text-xs text-foreground/40">
-            Limits: 3 Quick Exports/day &bull; 1 Pack/day
+            Limits: 5 Quick Exports/day &bull; 2 Packs/day
           </p>
         )}
       </div>

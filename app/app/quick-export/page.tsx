@@ -55,6 +55,7 @@ interface State {
   job?: JobInfo;
   globalError?: string;
   recentDownloads: RecentDownload[];
+  remaining?: { quick: number; batch: number };
 }
 
 type Action =
@@ -67,6 +68,7 @@ type Action =
   | { type: "set_job"; job: JobInfo }
   | { type: "set_global_error"; error: string }
   | { type: "add_recent_download"; download: RecentDownload }
+  | { type: "set_remaining"; remaining?: { quick: number; batch: number } }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -125,6 +127,8 @@ function reducer(state: State, action: Action): State {
       const updated = [action.download, ...state.recentDownloads].slice(0, 5);
       return { ...state, recentDownloads: updated };
     }
+    case "set_remaining":
+      return { ...state, remaining: action.remaining };
     case "reset":
       return {
         ...INITIAL_STATE,
@@ -344,6 +348,11 @@ export default function QuickExportPage() {
         return;
       }
 
+      // Store remaining quota if provided (free users only)
+      if (enqData?.remaining) {
+        dispatch({ type: "set_remaining", remaining: enqData.remaining });
+      }
+
       dispatch({
         type: "set_job",
         job: { jobId, status: "queued" },
@@ -467,6 +476,15 @@ export default function QuickExportPage() {
               label="Export JPG"
               loadingLabel="Exporting..."
             />
+
+            {/* Remaining exports badge (critical threshold only) */}
+            {!busy && !state.globalError && state.remaining && state.remaining.quick <= 2 && (
+              <p className="text-center text-xs font-medium">
+                <span className="gradient-btn inline-block rounded-full px-3 py-1">
+                  {state.remaining.quick} {state.remaining.quick === 1 ? 'export' : 'exports'} remaining today
+                </span>
+              </p>
+            )}
 
             {!busy && !state.globalError && (
               <p className="flex items-center justify-center gap-3 text-xs text-foreground/30">

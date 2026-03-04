@@ -1,7 +1,7 @@
-# PROJECT_STATE.md  
+# PROJECT_STATE.md
 ## SnapToSize — Authoritative System State
 
-Last updated: 2026-03-01
+Last updated: 2026-03-04
 
 ---
 
@@ -48,6 +48,8 @@ Runner:
 
 Storage:
 - Cloudflare R2 bucket: `snaptosize-zips`
+
+Cloudflare Workers Paid plan ($5/mnd) — activated 2026-03-03.
 
 Cloudflare Pages now requires:
 - WORKER_BASE_URL set in Production environment variables
@@ -248,8 +250,8 @@ Verified live: 2026-03-01. All events confirmed in PostHog Activity.
 Enforced at Worker level.
 
 Limits:
-- Quick Export: 3/day
-- Packs: 1/day
+- Quick Export: 5/day
+- Packs: 2/day
 
 HTTP 402 responses:
 - FREE_QUICK_LIMIT
@@ -263,8 +265,6 @@ TTL: 36h
 Server-authoritative.
 
 ---
-
-## 4.2 Stripe Integration (LIVE)
 
 ## 4.2 Stripe Integration (LIVE – HARDENED)
 
@@ -291,7 +291,20 @@ Webhook improvements:
 - Clerk mirrors subscription state
 
 Plan propagation:
-Stripe → Webhook → Clerk publicMetadata.plan → JWT → Worker enforcement
+Stripe → Webhook → Clerk publicMetadata.plan → JWT (template: "snap") → Worker enforcement
+
+JWT template "snap" contains:
+```json
+{ "plan": "{{user.public_metadata.plan}}" }
+```
+
+Worker secrets (must match production Clerk instance):
+- CLERK_JWKS_URL = https://clerk.snaptosize.com/.well-known/jwks.json
+- CLERK_ISSUER = https://clerk.snaptosize.com
+
+Critical: If Clerk instance changes, these secrets MUST be updated or all users resolve as "free".
+Bug fixed 2026-03-03: CLERK_JWKS_URL pointed to old dev instance after Clerk production migration.
+Root cause: kid mismatch — JWT signed by production Clerk, JWKS from dev Clerk.
 
 Worker fail-safe:
 If plan unclear or missing → treated as free.
@@ -382,11 +395,13 @@ Contract unchanged.
 - Webhook sync
 - Pro gating
 - Proxy architecture
-- Abuse protection (rate limits + active job caps)
-- Abuse protection (rate limiting + O(1) active job caps) 
-- Server-side analytics (PostHog)        
+- Abuse protection (rate limiting + O(1) active job caps)
+- Server-side analytics (PostHog)
+- JWT/Clerk production auth (verified 2026-03-03)
+- Cloudflare Workers Paid plan
 
 Core + monetization + protection base working.
+First paying customer acquired 2026-03-03.
 
 ---
 
@@ -471,7 +486,7 @@ error_code = "runner_failed"
 
 alert triggered
 
-Layer 3: Stuck Job Detection (LIVE)
+Layer 3: Stuck Job Detection (LIVE — OPTIMIZED 2026-03-03)
 
 Cloudflare Cron Trigger:
 
@@ -488,6 +503,10 @@ Mark error
 error_code = "timeout"
 
 Send alert
+
+Optimization: KV metadata (status + updated_at) stored on job: keys.
+Cron uses metadata from list() to skip non-running and recent jobs without individual get() calls.
+Reduces KV reads from O(all jobs) to O(stuck jobs only).
 
 Pagination implemented.
 Milliseconds consistent.
@@ -620,13 +639,46 @@ job_id is operational case number.
 
 ---
 
-After this layer is implemented:
-
-SnapToSize becomes:
+SnapToSize is:
 - Self-healing
 - Self-monitoring
 - Push-alert enabled
 - Production-safe without live supervision
+
+## 8.2 JWT Diagnostic Logging (LIVE — 2026-03-03)
+
+Worker includes persistent jwt_fail_reason logs for JWT verification failures.
+
+Logged failure reasons:
+- kid_not_found — signing key mismatch (JWKS doesn't contain token's kid)
+- kid_not_found_after_refresh — kid still missing after JWKS cache refresh
+- signature_invalid — token signature doesn't match
+- expired — token past exp claim
+- wrong_alg — algorithm not RS256
+- jwt_issuer_mismatch — iss claim doesn't match CLERK_ISSUER
+
+These logs fire only on errors, cost nothing in normal operation,
+and are critical for diagnosing auth issues in production.
+
+## 8.3 Known Technical Debt & Future Optimizations
+
+**Legacy dual KV write (LOW priority):**
+- updateJobState writes to both `job:{id}` (new) and `{id}` (legacy).
+- Frontend currently reads `{id}` via /status endpoint.
+- When frontend migrates to read `job:{id}`, remove legacy write to halve KV writes.
+
+**KV race conditions (LOW priority, non-critical):**
+- Rate limit, quota, and active job counters use read-modify-write on KV.
+- No atomic increment available in KV — theoretical race under concurrent requests from same user.
+- Impact: a user might occasionally bypass a limit by 1 request.
+- Fix if needed: migrate counters to Durable Objects for atomic operations.
+- Not worth fixing until proven problematic at scale.
+
+**JWKS cache is in-memory (INFO):**
+- JWKS keys cached 10 min in Worker memory.
+- Cloudflare Workers are stateless — cache resets per isolate.
+- At high concurrency, multiple isolates may each fetch JWKS independently.
+- Not a problem — Clerk JWKS endpoint handles this fine.
 
 # 9. Strategic Positioning
 
@@ -661,14 +713,14 @@ Differentiators unchanged.
    - No embedding of app inside marketing
    - Clear upgrade path
 
-## Phase 3: Hardening
+## Phase 3: Hardening (COMPLETE — 2026-03-03)
 
-- Abuse prevention
-- Concurrency caps
-- Logging
-- Monitoring
-- Production alerting
-- Remove debug endpoints
+- ~~Abuse prevention~~ DONE
+- ~~Concurrency caps~~ DONE
+- ~~Logging~~ DONE
+- ~~Monitoring~~ DONE
+- ~~Production alerting~~ DONE
+- Remove debug endpoints (LOW priority)
 
 ---
 
@@ -681,6 +733,10 @@ Differentiators unchanged.
 - No client-side plan trust.
 - Remove demo bypass before scale.
 
+- No new product features until:
+  - ≥ 50 paying users
+  - ≥ 7% free → pro conversion validated
+- Growth > Features
 ---
 
 # 12. Current System Status
@@ -690,6 +746,10 @@ Core engine + billing + reliability + abuse protection + upgrade attribution tra
 Clerk production instance live (clerk.snaptosize.com).
 Stripe production checkout + portal + webhook verified.
 PostHog growth funnel events verified live (2026-03-01).
+Worker Clerk secrets aligned with production instance (2026-03-03).
+Cloudflare Workers Paid plan active (2026-03-03).
+Cron stuck-job detection optimized with KV metadata (2026-03-03).
+First paying Pro customer live (2026-03-03).
 
 # 13. Growth System (ACTIVE PHASE)
 
@@ -726,6 +786,16 @@ Targets (initial):
 - Free → Pro conversion ≥ 10% (goal)
 - TTFE ≤ 60 seconds median
 - Job success rate ≥ 99%
+
+Activation definition:
+
+User is considered Activated when:
+- First successful export (pack OR single)
+- Within first session
+- No 402 encountered
+
+Activation rate target:
+≥ 60%
 
 ## 13.3 Funnel Definition (Tracked — LIVE)
 
@@ -792,7 +862,105 @@ Milestone path:
 - 500 paying users → prove growth engine
 - 1000+ paying users → scale distribution
 
+Pricing Lock:
+
+- $11.99 monthly
+- $97 yearly
+
+No pricing changes before:
+- 100 paying users
+- Or statistically significant churn data
+
+Reason:
+Do not change price without signal.
 ---
+
+## 13.7 Distribution Priority (LOCKED)
+
+Phase 1 (Validation – 0 → 100 paying users)
+
+Primary channel:
+- Pinterest (organic first, ads after baseline)
+- SEO (1–2 high-intent guides only)
+
+Secondary:
+- Direct outreach in Etsy seller communities (manual)
+
+Not allowed during validation phase:
+- TikTok
+- X
+- YouTube
+- Broad paid ads
+- Multi-channel chaos
+
+Rule:
+One channel must prove repeatable acquisition before adding another.
+
+## 13.8 SEO Content (LIVE — 2026-03-03)
+
+### /etsy-print-sizes — SEO Pillar Page (PRODUCTION)
+
+Comprehensive Etsy print sizes guide deployed as primary SEO entry point.
+
+URL: https://snaptosize.com/etsy-print-sizes
+
+SEO implementation:
+- Article schema (datePublished: 2025-02-10, dateModified: 2026-03-03)
+- BreadcrumbList schema (Home → Etsy Print Sizes Guide)
+- FAQPage schema (5 conversion-focused questions)
+- OpenGraph + Twitter Card with custom hero image
+- 4 strategic internal links (/pricing, /sizes, app)
+
+Content structure:
+- Premium hero section (100vh, custom OG image)
+- Visual proof: crop-to-fit vs SnapToSize comparison (Poppies/Koi images)
+- Common Etsy Print Mistakes section (6 cards)
+- Complete ratio tables: 2:3, 3:4, 4:5, ISO A-series, extras (all at 300 DPI)
+- Collapsible FAQ accordion (semantic, accessible)
+- Social proof elements ("Over 18,000 size packs generated")
+- Trust elements (guarantee pills, micro-benefit chips)
+
+Target keywords:
+- "Etsy print sizes"
+- "Etsy print ratios"
+- "300 DPI print sizes"
+- "Etsy 20MB limit"
+
+Navigation:
+- Header: "Print Sizes" → /etsy-print-sizes
+- Footer: "Print Sizes" → /etsy-print-sizes, "All Pack Sizes" → /sizes
+
+Status: Indexed, requested re-indexing 2026-03-03
+
+### /etsy-print-ratios — SEO Supporting Page (PRODUCTION)
+
+Educational page supporting /etsy-print-sizes pillar with ratio explanation content.
+
+URL: https://snaptosize.com/etsy-print-ratios
+
+SEO implementation:
+- Article schema (datePublished: 2026-03-04, dateModified: 2026-03-04)
+- BreadcrumbList schema (Home → Etsy Print Ratios)
+- FAQPage schema (5 questions)
+- OpenGraph + Twitter Card with custom hero image (hero_og_etsy-print-ratios.png)
+- Internal links to pillar page (/etsy-print-sizes) + core pages (/sizes, /pricing, /guide)
+- Bidirectional linking: pillar page links to supporting page (inline + related section)
+
+Content structure:
+- Educational sections explaining ratio groups (2:3, 3:4, 4:5, ISO, extras)
+- Visual infographic with overlay content (ratio boxes)
+- Why ratios matter for Etsy printables
+- Pack structure explanation
+- Product connection copy (non-promotional education)
+
+Target keywords:
+- "etsy print ratios"
+- "etsy printable ratios"
+- "print ratio packs"
+
+Added to sitemap with priority 0.8 (2026-03-04)
+
+Status: Deployed, ready for indexing
 
 ## Next Major Build
 
@@ -802,12 +970,12 @@ Focus shifts from backend stability to distribution and revenue optimization.
 
 Scope:
 
-- SEO content layer (Etsy guides, print size resources)
+- ~~SEO content layer (Etsy guides, print size resources)~~ DONE (/etsy-print-sizes live 2026-03-03)
 - Conversion copy optimization
 - Pricing experiments
 - ~~Upgrade funnel tracking (checkout_started → checkout_completed)~~ DONE (2026-03-01)
 - Stripe lifecycle UX polish (portal clarity, cancellation flow)
 - Revenue dashboard (MRR, Pro activation rate)
 
-Backend engine is stable.
+Backend engine is stable and optimized for 1000+ users.
 Now building growth engine.
