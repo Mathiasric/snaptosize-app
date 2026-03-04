@@ -254,8 +254,11 @@ Limits:
 - Packs: 2/day
 
 HTTP 402 responses:
-- FREE_QUICK_LIMIT
-- FREE_BATCH_LIMIT
+- FREE_QUICK_LIMIT (includes `used`, `limit` fields)
+- FREE_BATCH_LIMIT (includes `used`, `limit` fields)
+
+Success responses (free users only):
+- `remaining: { quick: N, batch: N }` - shows remaining exports for the day
 
 KV key:
 `quota:{userId}:{YYYY-MM-DD}`
@@ -263,6 +266,10 @@ KV key:
 TTL: 36h
 
 Server-authoritative.
+
+Frontend displays remaining count when critical:
+- Packs: shows badge when `remaining.batch <= 1`
+- Singles: shows badge when `remaining.quick <= 2`
 
 ---
 
@@ -357,10 +364,13 @@ Quota system (402 FREE_*) unchanged.
 
 - Packs working
 - Quick Export working
+  - Landscape orientation labels swap correctly (e.g., "8x10" → "10x8")
+  - Remaining exports badge (shows when batch ≤ 1 or quick ≤ 2)
 - Billing page working
 - 402 paywall UX implemented
 - Pro badge visible
 - Yearly discount badge (33%)
+- Free tier: 5 Quick Exports/day, 2 Packs/day (updated 2026-03-04)
 
 ---
 
@@ -388,7 +398,7 @@ Contract unchanged.
 
 - Infrastructure
 - ZIP generation
-- Quick Export
+- Quick Export (with landscape label swapping)
 - Naming
 - 20MB enforcement
 - Stripe checkout
@@ -399,9 +409,12 @@ Contract unchanged.
 - Server-side analytics (PostHog)
 - JWT/Clerk production auth (verified 2026-03-03)
 - Cloudflare Workers Paid plan
+- Multi-channel alerting (Pushover + Email + PostHog + Sentry)
+- Quota system with remaining counts (2 packs/day, 5 singles/day)
 
-Core + monetization + protection base working.
+Core + monetization + protection + observability stack complete.
 First paying customer acquired 2026-03-03.
+Comprehensive error monitoring deployed 2026-03-04.
 
 ---
 
@@ -680,6 +693,103 @@ and are critical for diagnosing auth issues in production.
 - At high concurrency, multiple isolates may each fetch JWKS independently.
 - Not a problem — Clerk JWKS endpoint handles this fine.
 
+## 8.4 Multi-Channel Alerting System (LIVE — 2026-03-04)
+
+Production error monitoring with redundant notification channels.
+
+### Tier 1: Critical Infrastructure Alerts (Pushover + Email)
+
+Dual-channel alerting for immediate attention:
+
+**R2 Storage Failures:**
+- Upload failures (/upload, /upload-zip)
+- Download failures (/download-by-key)
+- Alert: "SnapToSize R2 Error"
+
+**JWKS Authentication Failures:**
+- Clerk JWKS endpoint unreachable
+- Rate limited: max 1 alert per 15 min (prevents spam)
+- Alert: "SnapToSize Auth Error"
+
+**Job Failures:**
+- Runner failed after 3 retries
+- Stuck jobs detected by cron (>10 min)
+- Job timeout errors
+- Alert: "SnapToSize Error"
+
+**Notification Channels:**
+- **Pushover:** Mobile push notifications (priority: 1)
+- **Email:** Resend API via alerts@snaptosize.com
+- Both channels fire simultaneously for redundancy
+
+**Required Secrets:**
+- PUSHOVER_TOKEN
+- PUSHOVER_USER_KEY
+- RESEND_API_KEY
+- ALERT_EMAIL
+
+### Tier 2: Pattern Tracking (PostHog Events)
+
+Non-blocking events for dashboard analysis and pattern detection:
+
+**Authentication Issues:**
+- Event: `jwt_verification_failed`
+- Properties: error, jwks_url
+- Distinct ID: "system"
+
+**Abuse Patterns:**
+- Event: `rate_limit_hit`
+- Properties: route, limit, plan
+- Tracks per-user abuse patterns
+
+- Event: `active_job_cap_hit`
+- Properties: plan, active, max
+- Tracks concurrency pressure by plan tier
+
+**Implementation:**
+- All PostHog captures use `ctx.waitUntil()` (non-blocking)
+- Fail-silent pattern (analytics never breaks app)
+- Dashboard setup in PostHog UI for trend analysis
+
+### Tier 3: Logging (Cloudflare Workers Logs)
+
+Structured JSON logging via `wLog()` helper:
+- Request-level operations
+- Runner API calls
+- KV operations
+- Manual review via Cloudflare dashboard
+
+**Belt + Suspenders Philosophy:**
+Critical failures trigger both immediate alerts (Tier 1) AND event tracking (Tier 2) for post-mortem analysis.
+
+## 8.5 Frontend Error Monitoring (Sentry — LIVE)
+
+Sentry SDK (@sentry/nextjs) integrated for production error tracking.
+
+**Implementation:**
+- Client, server, and edge runtime configs
+- Instrumentation hook for Next.js App Router
+- Source maps uploaded automatically on build
+- React ErrorBoundary for crash recovery
+
+**Instrumented Routes:**
+- `/api/stripe/webhook` — signature + processing errors
+- `/api/stripe/checkout` — session creation failures
+- `/api/stripe/portal` — customer/portal errors
+- All React components via ErrorBoundary
+
+**Alerts Configured (sentry.io):**
+- 🚨 CRITICAL: Webhook failures → immediate email
+- ⚠️ HIGH: Checkout failures → email every 5 min
+- 📋 MEDIUM: Portal failures → email every 30 min
+
+**Environment Variables:**
+- NEXT_PUBLIC_SENTRY_DSN (Cloudflare Pages secret)
+- SENTRY_AUTH_TOKEN (for source map upload)
+
+**Production Ready:** 2026-03-04
+All revenue-critical paths monitored with email alerts.
+
 # 9. Strategic Positioning
 
 SnapToSize = Etsy-native print pack generator.
@@ -741,15 +851,28 @@ Differentiators unchanged.
 
 # 12. Current System Status
 
-Core engine + billing + reliability + abuse protection + upgrade attribution tracking complete.
+Core engine + billing + reliability + abuse protection + observability stack complete.
 
-Clerk production instance live (clerk.snaptosize.com).
-Stripe production checkout + portal + webhook verified.
-PostHog growth funnel events verified live (2026-03-01).
-Worker Clerk secrets aligned with production instance (2026-03-03).
-Cloudflare Workers Paid plan active (2026-03-03).
-Cron stuck-job detection optimized with KV metadata (2026-03-03).
-First paying Pro customer live (2026-03-03).
+**Infrastructure:**
+- Clerk production instance live (clerk.snaptosize.com)
+- Stripe production checkout + portal + webhook verified
+- Cloudflare Workers Paid plan active (2026-03-03)
+- Resend email verified domain (alerts@snaptosize.com)
+
+**Monitoring & Alerts:**
+- Multi-channel alerting: Pushover + Email (2026-03-04)
+- PostHog analytics + error event tracking (2026-03-01)
+- Sentry error monitoring (Next.js frontend, 2026-03-04)
+- Cron stuck-job detection optimized with KV metadata (2026-03-03)
+
+**Free Tier Optimization:**
+- Updated limits: 2 packs/day, 5 singles/day (2026-03-04)
+- Remaining counts in API responses
+- Conditional display in frontend (urgency-based)
+
+**Milestones:**
+- First paying Pro customer live (2026-03-03)
+- Comprehensive observability deployed (2026-03-04)
 
 # 13. Growth System (ACTIVE PHASE)
 
@@ -838,11 +961,17 @@ Lane C — Direct niche distribution:
 - Pinterest (printable audience)
 - IndieHackers / build-in-public
 
-## 13.5 Conversion Optimization (Planned experiments)
+## 13.5 Conversion Optimization
 
-- Show free remaining counts (quick + packs)
+**Implemented (2026-03-04):**
+- ✅ Show free remaining counts (quick + packs)
+  - Backend: Worker sends `remaining` in enqueue response
+  - Frontend: Conditional display (batch ≤ 1, quick ≤ 2)
+  - Creates urgency without noise
+
+**Planned experiments:**
 - Inline upsell after 402 (one-click to billing)
-- Watermark preview + “Remove watermark” CTA
+- Watermark preview + "Remove watermark" CTA
 - Annual plan highlight + anchor pricing
 - Checkout abandonment tracking
 - Exit-intent paywall on billing
