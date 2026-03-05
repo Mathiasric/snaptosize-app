@@ -40,11 +40,13 @@ export const SIZE_CATALOG: GroupDef[] = [
     label: "2\u00d73 Ratio",
     sizes: [
       inchSize(4, 6),
+      inchSize(6, 9),
       inchSize(8, 12),
       inchSize(10, 15),
       inchSize(12, 18),
       inchSize(16, 24),
       inchSize(20, 30),
+      inchSize(24, 36),
     ],
   },
   {
