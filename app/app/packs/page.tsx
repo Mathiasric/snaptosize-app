@@ -32,6 +32,7 @@ type State = {
   globalError?: string;
   recentDownloads: RecentDownload[];
   remaining?: { quick: number; batch: number };
+  batchProgress?: { current: number; total: number };
 };
 
 type Action =
@@ -44,6 +45,7 @@ type Action =
   | { type: "set_global_error"; error: string }
   | { type: "add_recent_download"; download: RecentDownload }
   | { type: "set_remaining"; remaining?: { quick: number; batch: number } }
+  | { type: "set_batch_progress"; current: number; total: number }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -96,6 +98,8 @@ function reducer(state: State, action: Action): State {
     }
     case "set_remaining":
       return { ...state, remaining: action.remaining };
+    case "set_batch_progress":
+      return { ...state, batchProgress: { current: action.current, total: action.total } };
     case "reset":
       return { ...INITIAL_STATE, file: state.file, selected: state.selected, recentDownloads: state.recentDownloads };
     default:
@@ -168,45 +172,37 @@ export default function AppPage() {
     dispatch({ type: "reset" });
   }
 
-  // ---- Poll ----
-  async function pollAll(
-    enqueued: { group: Group; jobId: string }[],
+  // ---- Poll a single job until terminal (done/error) or timeout ----
+  async function pollOne(
+    group: Group,
+    jobId: string,
     signal: AbortSignal,
-  ) {
+  ): Promise<"done" | "error"> {
     const start = Date.now();
     const timeoutMs = 3 * 60 * 1000;
-    const terminal = new Set<string>();
 
     while (!signal.aborted) {
       if (Date.now() - start > timeoutMs) {
-        dispatch({ type: "set_phase", phase: "done" });
-        return;
+        dispatch({
+          type: "set_job",
+          job: { group, jobId, status: "error", error: "Timed out" },
+        });
+        return "error";
       }
 
-      if (terminal.size >= enqueued.length) {
-        dispatch({ type: "set_phase", phase: "done" });
-        return;
-      }
+      const res = await fetch(
+        `/api/status?job_id=${encodeURIComponent(jobId)}`,
+        { signal },
+      );
 
-      for (const { group, jobId } of enqueued) {
-        if (terminal.has(jobId)) continue;
-
-        const res = await fetch(
-          `/api/status?job_id=${encodeURIComponent(jobId)}`,
-          { signal },
-        );
-
-        if (!res.ok) continue;
-
+      if (res.ok) {
         const data = await res.json();
 
         if (isDone(data)) {
-          terminal.add(jobId);
           dispatch({
             type: "set_job",
             job: { group, jobId, status: "done" },
           });
-          // Add to recent downloads
           const pack = PACKS.find((p) => p.key === group);
           dispatch({
             type: "add_recent_download",
@@ -217,8 +213,8 @@ export default function AppPage() {
               jobId,
             },
           });
+          return "done";
         } else if (isError(data)) {
-          terminal.add(jobId);
           dispatch({
             type: "set_job",
             job: {
@@ -228,6 +224,7 @@ export default function AppPage() {
               error: (data.error as string) || "Processing failed",
             },
           });
+          return "error";
         } else {
           const s: JobStatus =
             data.status === "queued" || data.state === "queued"
@@ -242,6 +239,7 @@ export default function AppPage() {
 
       await new Promise((r) => setTimeout(r, 1000));
     }
+    return "error";
   }
 
   // ---- Main flow ----
@@ -278,10 +276,6 @@ export default function AppPage() {
       }
       dispatch({ type: "set_image_key", imageKey });
 
-      // Enqueue
-      dispatch({ type: "set_phase", phase: "enqueuing" });
-      const enqueued: { group: Group; jobId: string }[] = [];
-
       // Free/guest users: only enqueue first pack, lock the rest
       const toEnqueue = isPro ? selectedGroups : selectedGroups.slice(0, 1);
       if (!isPro && selectedGroups.length > 1) {
@@ -290,7 +284,13 @@ export default function AppPage() {
         }
       }
 
-      for (const group of toEnqueue) {
+      // Sequential: enqueue one pack → poll until done/error → next pack
+      dispatch({ type: "set_phase", phase: "polling" });
+      let anySucceeded = false;
+
+      for (let i = 0; i < toEnqueue.length; i++) {
+        const group = toEnqueue[i];
+        dispatch({ type: "set_batch_progress", current: i + 1, total: toEnqueue.length });
         dispatch({ type: "set_job", job: { group, status: "queued" } });
 
         const enqRes = await fetch("/api/enqueue", {
@@ -332,7 +332,7 @@ export default function AppPage() {
             type: "set_job",
             job: { group, status: "error", error: `HTTP ${enqRes.status}: ${body}` },
           });
-          continue;
+          continue; // Skip to next pack
         }
 
         const enqData = await enqRes.json();
@@ -345,23 +345,23 @@ export default function AppPage() {
           continue;
         }
 
-        // Store remaining quota if provided (free users only)
         if (enqData?.remaining) {
           dispatch({ type: "set_remaining", remaining: enqData.remaining });
         }
 
-        enqueued.push({ group, jobId });
         dispatch({ type: "set_job", job: { group, jobId, status: "queued" } });
+
+        // Poll this single pack until done or error before moving to next
+        const result = await pollOne(group, jobId, ac.signal);
+        if (result === "done") anySucceeded = true;
       }
 
-      if (enqueued.length === 0) {
+      if (!anySucceeded && toEnqueue.length > 0) {
         dispatch({ type: "set_phase", phase: "error" });
         return;
       }
 
-      // Poll
-      dispatch({ type: "set_phase", phase: "polling" });
-      await pollAll(enqueued, ac.signal);
+      dispatch({ type: "set_phase", phase: "done" });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : String(err);
@@ -448,6 +448,13 @@ export default function AppPage() {
                 <p className="text-xs text-error/90">{state.globalError}</p>
               </div>
             ) : null}
+
+            {/* Batch progress */}
+            {busy && state.batchProgress && state.batchProgress.total > 1 && (
+              <p className="text-center text-xs font-medium text-foreground/50">
+                Processing {state.batchProgress.current} of {state.batchProgress.total}…
+              </p>
+            )}
 
             {/* Cancel / Reset */}
             {busy && (
