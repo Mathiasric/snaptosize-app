@@ -315,6 +315,19 @@ export default function AppPage() {
             return;
           }
 
+          if (enqRes.status === 429) {
+            try {
+              const parsed = JSON.parse(body);
+              if (parsed.error === "too_many_active_jobs") {
+                dispatch({
+                  type: "set_global_error",
+                  error: parsed.message || "You have too many exports running. Please wait for current jobs to finish, then try again.",
+                });
+                return;
+              }
+            } catch { /* fall through to generic */ }
+          }
+
           dispatch({
             type: "set_job",
             job: { group, status: "error", error: `HTTP ${enqRes.status}: ${body}` },
