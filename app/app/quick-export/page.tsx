@@ -204,7 +204,7 @@ export default function QuickExportPage() {
       if (Date.now() - start > timeoutMs) {
         dispatch({
           type: "set_job",
-          job: { jobId, status: "error", error: "Timed out after 3 minutes" },
+          job: { jobId, status: "error", error: "Timed out after 3 minutes", sizeLabel },
         });
         dispatch({ type: "set_phase", phase: "done" });
         return;
@@ -228,7 +228,7 @@ export default function QuickExportPage() {
           `/api/download?job_id=${encodeURIComponent(jobId)}`;
         dispatch({
           type: "set_job",
-          job: { jobId, status: "done", downloadUrl },
+          job: { jobId, status: "done", downloadUrl, sizeLabel },
         });
         // Add to recent downloads
         dispatch({
@@ -251,6 +251,7 @@ export default function QuickExportPage() {
             jobId,
             status: "error",
             error: (data.error as string) || "Processing failed",
+            sizeLabel,
           },
         });
         dispatch({ type: "set_phase", phase: "done" });
@@ -261,7 +262,7 @@ export default function QuickExportPage() {
         data.status === "queued" || data.state === "queued"
           ? "queued"
           : "running";
-      dispatch({ type: "set_job", job: { jobId, status: s } });
+      dispatch({ type: "set_job", job: { jobId, status: s, sizeLabel } });
 
       await new Promise((r) => setTimeout(r, 1000));
     }
