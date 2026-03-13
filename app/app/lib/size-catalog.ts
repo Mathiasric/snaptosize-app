@@ -79,6 +79,7 @@ export const SIZE_CATALOG: GroupDef[] = [
       isoSize("A3", 3508, 4961),
       isoSize("A2", 4961, 7016),
       isoSize("A1", 7016, 9933),
+      isoSize("A0", 9933, 14043),
     ],
   },
   {
@@ -88,6 +89,7 @@ export const SIZE_CATALOG: GroupDef[] = [
       inchSize(5, 7),
       { id: "8.5x11", widthPx: inToPx(8.5), heightPx: inToPx(11), label: `8.5x11 in (${inToPx(8.5)}\u00d7${inToPx(11)})` },
       inchSize(11, 14),
+      inchSize(11, 17),
       inchSize(16, 20),
       inchSize(20, 24),
     ],
