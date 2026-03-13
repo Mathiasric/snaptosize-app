@@ -37,6 +37,8 @@ interface JobInfo {
   status: JobStatus;
   downloadUrl?: string;
   error?: string;
+  /** Label frozen at export time so it doesn't change when user picks a new size */
+  sizeLabel?: string;
 }
 
 interface RecentDownload {
@@ -366,16 +368,17 @@ export default function QuickExportPage() {
         dispatch({ type: "set_remaining", remaining: enqData.remaining });
       }
 
+      const sizeLabel = selectedSize
+        ? getSizeLabel(selectedSize, state.orientation)
+        : state.sizeId;
+
       dispatch({
         type: "set_job",
-        job: { jobId, status: "queued" },
+        job: { jobId, status: "queued", sizeLabel },
       });
 
       // Poll
       dispatch({ type: "set_phase", phase: "polling" });
-      const sizeLabel = selectedSize
-        ? getSizeLabel(selectedSize, state.orientation)
-        : state.sizeId;
       await pollJob(jobId, sizeLabel, ac.signal);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
@@ -561,9 +564,10 @@ export default function QuickExportPage() {
             <QuickJobCard
               job={state.job}
               sizeLabel={
-                selectedSize
+                state.job.sizeLabel ??
+                (selectedSize
                   ? getSizeLabel(selectedSize, state.orientation)
-                  : state.sizeId
+                  : state.sizeId)
               }
               onRetry={state.job.status === "error" ? exportSingle : undefined}
             />
