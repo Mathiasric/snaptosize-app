@@ -58,6 +58,7 @@ export const SIZE_CATALOG: GroupDef[] = [
       inchSize(12, 16),
       inchSize(15, 20),
       inchSize(18, 24),
+      inchSize(24, 32),
     ],
   },
   {
@@ -68,6 +69,7 @@ export const SIZE_CATALOG: GroupDef[] = [
       inchSize(12, 15),
       inchSize(16, 20),
       inchSize(20, 25),
+      inchSize(24, 30),
     ],
   },
   {
@@ -90,7 +92,6 @@ export const SIZE_CATALOG: GroupDef[] = [
       { id: "8.5x11", widthPx: inToPx(8.5), heightPx: inToPx(11), label: `8.5x11 in (${inToPx(8.5)}\u00d7${inToPx(11)})` },
       inchSize(11, 14),
       inchSize(11, 17),
-      inchSize(16, 20),
       inchSize(20, 24),
     ],
   },
