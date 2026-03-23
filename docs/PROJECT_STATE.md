@@ -1,7 +1,10 @@
 # PROJECT_STATE.md
-## SnapToSize — Authoritative System State
+## SnapToSize — Technical System State
 
-Last updated: 2026-03-04
+Last updated: 2026-03-23
+
+> This file is the authoritative source for infrastructure, backend, API contracts, billing implementation, and monitoring.
+> For business strategy, ICP, funnel, and growth execution, see GROWTH_STATE.md.
 
 ---
 
@@ -10,22 +13,62 @@ Last updated: 2026-03-04
 SnapToSize is a SaaS tool for Etsy sellers.
 
 Core promise:
-
 > Upload one high-resolution image → receive ready-to-sell print size ZIP packs.
 
-System runs full SaaS architecture:
+System architecture:
 
-Browser  
-→ Next.js (Proxy + Clerk auth)  
-→ Cloudflare Worker  
-→ R2 storage  
-→ Runner (Fly.io compute)  
-→ R2  
-→ Worker  
-→ Next Proxy  
-→ Browser  
+```
+Browser
+→ Next.js (Proxy + Clerk auth)
+→ Cloudflare Worker
+→ R2 storage
+→ Runner (Fly.io compute)
+→ R2
+→ Worker
+→ Next Proxy
+→ Browser
+```
 
 Frontend never talks directly to Worker or R2.
+
+---
+
+# 1.5 Repository Structure
+
+Three separate repos. Each has a distinct responsibility.
+
+## snaptosize-website
+Marketing site: snaptosize.com
+- Next.js static export (output: "out")
+- Deployed to Cloudflare Pages
+- Root directory: app-next/
+- Contains: landing page, SEO pages, pricing, FAQ, EmailCapture component
+- API routes do NOT work (static export) — use Worker for any server logic
+- EmailCapture calls Worker directly for subscribe
+- `images: { unoptimized: true }` — Cloudflare Pages constraint, do not change
+- Hero background: `<picture>` with WebP primary + PNG fallback (see §15)
+- OG images: Generated via Playwright MCP CLI screenshots (see §16)
+
+## snaptosize-app  
+Frontend app: app.snaptosize.com
+- Next.js on Cloudflare Pages
+- Contains: /app/packs, /app/quick-export, billing, Clerk auth
+- Communicates with Worker via Next.js proxy
+- Never talks directly to Worker or R2 from client
+
+## snaptosize-worker (services/worker)
+Backend + API: worker.snaptosize-mathias.workers.dev
+- Cloudflare Worker
+- Single source of truth for: quota enforcement, plan gating, job processing
+- Handles: /upload, /enqueue, /status, /download, /upload-zip
+- Planned: /subscribe (email capture — see §9.5)
+- Contains: Stripe webhook, Resend email, PostHog analytics, abuse protection
+- All secrets live here (RESEND_API_KEY, RESEND_AUDIENCE_ID, CLERK_JWKS_URL etc.)
+
+## Rule
+If it requires server-side logic → it belongs in the Worker.
+Marketing site is static only.
+App frontend proxies through Next.js to Worker.
 
 ---
 
@@ -33,26 +76,18 @@ Frontend never talks directly to Worker or R2.
 
 ## Domains
 
-Marketing:
-- https://snaptosize.com
+| Purpose | URL |
+|---------|-----|
+| Marketing | https://snaptosize.com |
+| App | https://app.snaptosize.com |
+| Worker | https://worker.snaptosize-mathias.workers.dev (future: api.snaptosize.com) |
 
-App:
-- https://app.snaptosize.com
+Runner: Fly.io app (services/runner)
+Storage: Cloudflare R2 bucket `snaptosize-zips`
+Cloudflare Workers Paid plan ($5/mnd) — activated 2026-03-03
 
-Worker:
-- https://worker.snaptosize-mathias.workers.dev  
-(Future: api.snaptosize.com)
-
-Runner:
-- Fly.io app (services/runner)
-
-Storage:
-- Cloudflare R2 bucket: `snaptosize-zips`
-
-Cloudflare Workers Paid plan ($5/mnd) — activated 2026-03-03.
-
-Cloudflare Pages now requires:
-- WORKER_BASE_URL set in Production environment variables
+Cloudflare Pages requires:
+- `WORKER_BASE_URL` set in Production environment variables
 
 ---
 
@@ -60,1051 +95,785 @@ Cloudflare Pages now requires:
 
 SnapToSize frontend runs on Cloudflare Pages (static prerender).
 
-Constraint:
-- POST requests to /app/* routes return 405 by default.
-- Next.js Server Actions (including Clerk invalidateCacheAction) POST to current route.
-- Middleware does NOT execute for prerendered static responses on Pages.
+**Constraint:**
+- POST requests to /app/* routes return 405 by default
+- Next.js Server Actions (including Clerk invalidateCacheAction) POST to current route
+- Middleware does NOT execute for prerendered static responses on Pages
 
-Workaround (Production):
-- Server Action POSTs with `next-action` header are intercepted at edge level.
-- Response: 200 with `content-type: text/x-component` and no-op RSC flight body.
-- Prevents Clerk auth state changes from failing on static routes.
+**Workaround (Production):**
+- Server Action POSTs with `next-action` header are intercepted at edge level
+- Response: 200 with `content-type: text/x-component` and no-op RSC flight body
+- Prevents Clerk auth state changes from failing on static routes
 
-Important:
-SnapToSize frontend assumes static hosting.
-Server Actions must never be relied upon for critical functionality.
+**Rule:** Server Actions must never be relied upon for critical functionality.
 
-# 3. Backend Status (PRODUCTION READY)
+---
+
+# 3. Backend
 
 ## 3.1 Etsy Pack System
 
 Five production Etsy ZIP packs:
 
-1. 2x3_ratio.zip  
-2. 3x4_ratio.zip  
-3. 4x5_ratio.zip  
-4. ISO_A_series.zip  
-5. Common_sizes.zip  
-+1. 2x3_print_sizes.zip  
-+2. 3x4_print_sizes.zip  
-+3. 4x5_print_sizes.zip  
-+4. iso_print_sizes.zip  
-+5. extras_print_sizes.zip   
+| Pack | Filename |
+|------|----------|
+| 2:3 ratio | 2x3_print_sizes.zip |
+| 3:4 ratio | 3x4_print_sizes.zip |
+| 4:5 ratio | 4x5_print_sizes.zip |
+| ISO A-series | iso_print_sizes.zip |
+| Common sizes | extras_print_sizes.zip |
 
 Each pack:
 - 300 DPI
 - JPEG
 - Lanczos resize
-- Stretch-only (NO cropping)
+- Stretch-only (NO cropping) — deliberate product differentiator
 - Auto-rotated via EXIF
 - 20MB Etsy hard limit enforced
 - Quality fallback: 80 → 76 → 72 → 68 → 64 → 60
 
 ---
 
-## 3.1.1 Job Modes (Locked)
+## 3.2 Job Modes (Locked)
 
-System supports multiple output modes via the same job pipeline:
+**`mode = "pack"` (default)**
+- Output: ZIP (application/zip)
 
-- `mode = "pack"` (default)
-  - Output: ZIP (application/zip)
-
-- `mode = "single"` (LIVE)
-  - Output: single JPG (image/jpeg)
-  - User selects size + orientation
-  - Landscape swaps dimensions
-
-Single mode now:
-- Runner: implemented
-- Worker: implemented
-- Frontend: implemented (Quick Export tab)
-- Presigned filename respected
-- Content-Disposition enforced
+**`mode = "single"` (LIVE)**
+- Output: single JPG (image/jpeg)
+- User selects size + orientation
+- Landscape swaps dimensions
+- Runner, Worker, Frontend: all implemented
 
 ---
 
-## 3.2 Naming Standard (Locked)
+## 3.3 Naming Standard (Locked)
 
-### Pack ZIP + Folder naming
-
-ZIP filename:
-- `<group>_print_sizes.zip`
-
-Folder inside ZIP:
-- `<group>_print_sizes/`
+**Pack ZIP + Folder:**
+- ZIP filename: `<group>_print_sizes.zip`
+- Folder inside ZIP: `<group>_print_sizes/`
 - No UUID paths
 
-### Single export naming
-
-Uses:
-- `download_filename` from KV
-
-Fallback:
-- `export_<group>_<size>_<orientation>.jpg`
-
-All downloads set Content-Disposition.
-
----
-
-## 3.3 Stretch Policy (Strategic Choice)
-
-Deliberate stretch resize.
-
-Product differentiator.
+**Single export:**
+- Uses `download_filename` from KV
+- Fallback: `export_<group>_<size>_<orientation>.jpg`
+- All downloads set Content-Disposition
 
 ---
 
 ## 3.4 20MB Etsy Limit Handling
 
-ZIP size ≤ 20MB.
-
+ZIP size ≤ 20MB enforced.
 Fallback encoding chain preserved.
-
 413 returned on hard fail.
 
 ---
 
-## 3.5 Quick Export Mode (LIVE)
-
-Square supported.
-
-All orientations working.
-
-Same quota system as pack mode.
-
----
-
-## 3.6 Server-Side Analytics (LIVE)
-
-PostHog server-side analytics implemented.
-
-Worker emits events:
-
-- enqueue_success
-- job_done
-- job_error
-- download_clicked
-
-Events are:
-- Non-blocking (ctx.waitUntil)
-- Fail-silent
-- No PII (distinct_id = clerk:{userId} or ip:{ip})
-- EU host default (https://eu.posthog.com)
-- Requires POSTHOG_API_KEY secret in Worker
-
-Analytics is production-safe and verified live.
-
-### Next.js App Events (Server-Side)
-
-Next.js app emits events via server-side PostHog wrapper (`app/lib/posthog.ts`).
-
-All use `distinct_id = clerk:{userId}` to match Worker format.
-
-Events:
-
-- **billing_view** — every billing page render
-  - Properties: source, kind, success, canceled, plan_before
-  - File: `app/api/analytics/billing-view/route.ts`
-
-- **upgrade_clicked** — billing page opened with `?source=` param
-  - Properties: source, kind, entry, plan_before
-  - File: `app/api/analytics/billing-view/route.ts`
-
-- **checkout_started** — Stripe checkout session created
-  - Properties: interval, source, kind, plan_before
-  - File: `app/api/stripe/checkout/route.ts`
-
-- **checkout_completed** — Stripe webhook confirms payment
-  - Properties: source, kind, interval, price_id, plan_after
-  - File: `app/api/stripe/webhook/route.ts`
-
-- **portal_opened** — Stripe billing portal opened
-  - Properties: plan_before, entry
-  - File: `app/api/stripe/portal/route.ts`
-
-- **subscription_updated** — Stripe subscription status change
-  - Properties: status, plan_after
-  - File: `app/api/stripe/webhook/route.ts`
-
-- **subscription_deleted** — Stripe subscription canceled
-  - Properties: status, plan_after
-  - File: `app/api/stripe/webhook/route.ts`
-
-Attribution chain:
-- Upgrade links pass `?source=` and `?kind=` to billing page
-- Billing page forwards source/kind to checkout POST body
-- Checkout route writes source/kind into Stripe session metadata
-- Webhook reads session.metadata.source/kind into checkout_completed
-
-Important implementation detail:
-- All posthogCapture() calls MUST be awaited on Cloudflare Pages edge runtime.
-- Without await, the edge worker terminates before the fetch completes and events are silently dropped.
-- This applies to all route handlers using `export const runtime = "edge"`.
-
-Verified live: 2026-03-01. All events confirmed in PostHog Activity.
-
 # 4. Free vs Pro System (LIVE)
 
-## 4.1 Free Plan
+## 4.1 Free Plan Limits
 
-Enforced at Worker level.
+Enforced at Worker level. Server-authoritative.
 
-Limits:
-- Quick Export: 5/day
-- Packs: 2/day
+| Feature | Limit |
+|---------|-------|
+| Quick Export | 5/day |
+| Packs | 2/day |
 
 HTTP 402 responses:
-- FREE_QUICK_LIMIT (includes `used`, `limit` fields)
-- FREE_BATCH_LIMIT (includes `used`, `limit` fields)
+- `FREE_QUICK_LIMIT` — includes `used`, `limit` fields
+- `FREE_BATCH_LIMIT` — includes `used`, `limit` fields
 
 Success responses (free users only):
-- `remaining: { quick: N, batch: N }` - shows remaining exports for the day
-
-KV key:
-`quota:{userId}:{YYYY-MM-DD}`
-
-TTL: 36h
-
-Server-authoritative.
+- `remaining: { quick: N, batch: N }` — shows remaining exports for the day
 
 Frontend displays remaining count when critical:
-- Packs: shows badge when `remaining.batch <= 1`
-- Singles: shows badge when `remaining.quick <= 2`
+- Packs: badge when `remaining.batch <= 1`
+- Singles: badge when `remaining.quick <= 2`
+
+KV key: `quota:{userId}:{YYYY-MM-DD}` — TTL: 36h
 
 ---
 
-## 4.2 Stripe Integration (LIVE – HARDENED)
+## 4.2 Stripe Integration (LIVE — HARDENED)
 
-Stripe Checkout: implemented  
-Stripe Customer Portal: implemented  
-Stripe Webhook: implemented  
-Clerk metadata sync: implemented  
+Stripe Checkout, Customer Portal, Webhook, and Clerk metadata sync: all implemented.
 
-Lifecycle hardening (2026-02-24):
+**Lifecycle hardening (2026-02-24):**
 
-Handled statuses:
-- active → pro
-- trialing → pro
-- past_due → pro (grace period retained)
-- canceled → free
-- unpaid → free
-- incomplete → free
-- incomplete_expired → free
+| Stripe status | Plan |
+|---------------|------|
+| active | pro |
+| trialing | pro |
+| past_due | pro (grace period) |
+| canceled | free |
+| unpaid | free |
+| incomplete | free |
+| incomplete_expired | free |
 
-Webhook improvements:
+**Webhook improvements:**
 - Idempotency guard (event.id deduplication per instance)
 - Explicit error handling (returns 500 to trigger Stripe retry)
-- Stripe remains source of truth
-- Clerk mirrors subscription state
+- Stripe is source of truth; Clerk mirrors state
 
-Plan propagation:
+**Plan propagation:**
+```
 Stripe → Webhook → Clerk publicMetadata.plan → JWT (template: "snap") → Worker enforcement
+```
 
-JWT template "snap" contains:
+JWT template "snap":
 ```json
 { "plan": "{{user.public_metadata.plan}}" }
 ```
 
-Worker secrets (must match production Clerk instance):
-- CLERK_JWKS_URL = https://clerk.snaptosize.com/.well-known/jwks.json
-- CLERK_ISSUER = https://clerk.snaptosize.com
+**Worker secrets (must match production Clerk instance):**
+- `CLERK_JWKS_URL` = https://clerk.snaptosize.com/.well-known/jwks.json
+- `CLERK_ISSUER` = https://clerk.snaptosize.com
 
-Critical: If Clerk instance changes, these secrets MUST be updated or all users resolve as "free".
-Bug fixed 2026-03-03: CLERK_JWKS_URL pointed to old dev instance after Clerk production migration.
-Root cause: kid mismatch — JWT signed by production Clerk, JWKS from dev Clerk.
+**Critical:** If Clerk instance changes, these secrets MUST be updated or all users resolve as "free".
+Bug fixed 2026-03-03: CLERK_JWKS_URL pointed to old dev instance after Clerk production migration. Root cause: kid mismatch.
 
-Worker fail-safe:
-If plan unclear or missing → treated as free.
+Worker fail-safe: If plan unclear or missing → treated as free.
 
 ---
 
-## 4.3 Demo Bypass (REMOVED – 2026-02-24)
+## 4.3 Demo Bypass (REMOVED — 2026-02-24)
 
 Production demo bypass eliminated.
+- Worker no longer respects client-provided `demo` flag
+- Quota enforcement depends ONLY on plan (free/pro)
+- Worker forcibly sets: free → demo=true (watermark), pro → demo=false
+- `/app/test` page removed
 
-Changes:
-- Worker no longer respects client-provided `demo` flag for quota bypass.
-- Quota enforcement depends ONLY on plan (free/pro).
-- Worker forcibly sets:
-  - free → demo=true (watermark)
-  - pro → demo=false
-- `/app/test` page removed from frontend.
-
-Result:
 No production path exists to bypass quota without Stripe-backed Pro plan.
 
 ---
 
-## 4.4 Abuse Protection (LIVE – 2026-02-24)
+## 4.4 Abuse Protection (LIVE — 2026-02-24)
 
-Worker-level abuse protection implemented.
+Worker-level abuse protection:
 
-Rate limits (per userId or ip fallback):
+**Rate limits (per userId or ip fallback):**
 - POST /upload → 10 requests / 10 minutes
 - POST /enqueue → 30 requests / 10 minutes
 
-Active job caps (KV counter-based, O(1)):
+**Active job caps (KV counter-based, O(1)):**
 - Free: 2 concurrent jobs
 - Pro: 7 concurrent jobs
 
 Implementation:
-- KV key: active:{userId}
-- TTL: 60 minutes (self-healing)
-- active_counted flag prevents double-decrement
-- 429 responses:
-  - code: "rate_limited"
-  - error: "too_many_active_jobs"
-
-No API contract changes.
-Quota system (402 FREE_*) unchanged.
-
-# 5. Frontend Status
-
-## 5.1 Production UI
-
-- Packs working
-- Quick Export working
-  - Landscape orientation labels swap correctly (e.g., "8x10" → "10x8")
-  - Remaining exports badge (shows when batch ≤ 1 or quick ≤ 2)
-- Billing page working
-- 402 paywall UX implemented
-- Pro badge visible
-- Yearly discount badge (33%)
-- Free tier: 5 Quick Exports/day, 2 Packs/day (updated 2026-03-04)
+- KV key: `active:{userId}` — TTL: 60 minutes (self-healing)
+- `active_counted` flag prevents double-decrement
+- 429 responses: `code: "rate_limited"` or `error: "too_many_active_jobs"`
 
 ---
 
+# 5. Frontend
+
+## 5.1 Production UI (LIVE)
+
+- Packs: working
+- Quick Export: working
+  - Landscape orientation labels swap correctly (e.g., "8x10" → "10x8")
+  - Remaining exports badge (batch ≤ 1 or quick ≤ 2)
+- Billing page: working (redesigned with Free vs Pro comparison table, social proof)
+- 402 paywall UX: implemented
+- Pro badge: visible
+- Yearly discount badge: 33%
+- Onboarding guide: always visible on both pages (not dismissible)
+- Watermark notice: free users see "Free: includes watermark · Remove" text on uploaded preview (links to billing)
+- Size request: inline form ("Missing a size?") on both pages → PostHog event + email notification
+- JobCard micro-interactions: slide-in animation + success-pop on completion
+- Size catalog: 5x5 square and 13x19 fine art added (2026-03-23)
+
 ## 5.2 Debug Page
 
-Still present for internal use.
-
-Not public UX.
+Present for internal use only. Not public UX.
 
 ---
 
 # 6. Worker API (Immutable Contract)
 
-POST /upload  
-POST /enqueue  
-GET /status/:job_id  
-GET /download/:job_id  
-POST /upload-zip  
+```
+POST /upload
+POST /enqueue
+GET  /status/:job_id
+GET  /download/:job_id
+POST /upload-zip
+```
 
-Contract unchanged.
+**Contract is immutable.** Do not modify endpoints, response shapes, or auth flow without explicit instruction.
 
 ---
 
-# 7. What Is Considered Stable
+# 7. What Is Stable (Do Not Touch)
 
-- Infrastructure
-- ZIP generation
-- Quick Export (with landscape label swapping)
-- Naming
+- Infrastructure and proxy architecture
+- ZIP generation and naming
+- Quick Export (landscape label swapping)
 - 20MB enforcement
-- Stripe checkout
-- Webhook sync
-- Pro gating
-- Proxy architecture
+- Stripe checkout + webhook sync
+- Pro gating and quota enforcement
 - Abuse protection (rate limiting + O(1) active job caps)
 - Server-side analytics (PostHog)
 - JWT/Clerk production auth (verified 2026-03-03)
 - Cloudflare Workers Paid plan
 - Multi-channel alerting (Pushover + Email + PostHog + Sentry)
-- Quota system with remaining counts (2 packs/day, 5 singles/day)
-
-Core + monetization + protection + observability stack complete.
-First paying customer acquired 2026-03-03.
-Comprehensive error monitoring deployed 2026-03-04.
 
 ---
 
-# 8. What Is NOT Built Yet
+# 8. Production Reliability Layer (LIVE)
 
-- Subscription lifecycle UX polish (cancel_at_period_end display, portal clarity)
-- Client-side funnel tracking on marketing site (landing → app click attribution)
-- Growth content layer (SEO guides + landing pages)
+System is: self-healing, KV-backed, cron-monitored, push-alert enabled.
 
----
+## Layer 1: Persistent Job State
 
-# 8.1 Production Reliability Layer (LIVE – PRODUCTION)
-Reliability system is fully implemented and deployed.
+KV key: `job:{job_id}`
 
-System is:
-
-Self-healing
-
-KV-backed
-
-Cron-monitored
-
-Push-alert enabled
-
-Layer 1: Persistent Job State (LIVE)
-
-KV key:
-
-job:{job_id}
-
-State includes:
-
-status
-
-retry_count
-
-error_code
-
-error_message
-
-runner_status
-
-r2_key
-
-updated_at
-
-alert_sent
-
-KV updated on:
-
-enqueue start
-
-runner_call start
-
-retry increment
-
-runner failure
-
-process_done
-
-timeout
-
-job_id is authoritative operational key.
-
-Layer 2: Auto-Heal (LIVE)
-
-Worker retries runner up to 3 times on:
-
-network error
-
-5xx
-
-timeout
-
-Exponential backoff.
-
-After 3 failures:
-
-status = error
-
-error_code = "runner_failed"
-
-alert triggered
-
-Layer 3: Stuck Job Detection (LIVE — OPTIMIZED 2026-03-03)
-
-Cloudflare Cron Trigger:
-
-*/5 * * * *
-
-Every 5 minutes:
-
-Scan KV prefix job:
-
-If status == running AND updated_at older than 10 min:
-
-Mark error
-
-error_code = "timeout"
-
-Send alert
-
-Optimization: KV metadata (status + updated_at) stored on job: keys.
-Cron uses metadata from list() to skip non-running and recent jobs without individual get() calls.
-Reduces KV reads from O(all jobs) to O(stuck jobs only).
-
-Pagination implemented.
-Milliseconds consistent.
-No manual monitoring required.
-
-Layer 4: Mobile Alerting (LIVE)
-
-Alert channel: Pushover
-
-Trigger conditions:
-
-runner failed after retries
-
-stuck job detected
-
-job transitions to error
-
-Alert contains:
-
-job_id
-
-error_code
-
-group
-
-mode
-
-alert_sent flag prevents duplicate alerts.
-
-System is production-safe without live supervision.
-
----
-
-## Layer 1: Persistent Job State (KV-backed)
-
-Each job_id becomes the single source of truth.
-
-KV key:
-job:{job_id}
-
-Value structure:
+```json
 {
-  status: "running" | "done" | "error",
-  retry_count: number,
-  error_code?: string,
-  error_message?: string,
-  runner_status?: number,
-  r2_key?: string,
-  updated_at: timestamp
+  "status": "running | done | error",
+  "retry_count": 0,
+  "error_code": "string (optional)",
+  "error_message": "string (optional)",
+  "runner_status": 200,
+  "r2_key": "string (optional)",
+  "updated_at": "timestamp",
+  "alert_sent": false
 }
+```
 
-Worker must update KV at:
-- enqueue start
-- runner_call start
-- runner_call fail
-- retry increment
-- process_done
-- error
-- timeout
+KV updated on: enqueue start, runner_call start, runner_call fail, retry increment, process_done, error, timeout.
 
-job_id becomes primary operational debug key.
+`job_id` = primary operational debug key.
+`request_id` = correlation key.
 
-request_id remains correlation key.
-
----
+**Legacy dual KV write (LOW priority debt):**
+- `updateJobState` writes to both `job:{id}` (new) and `{id}` (legacy)
+- Frontend currently reads `{id}` via /status endpoint
+- When frontend migrates to `job:{id}`, remove legacy write to halve KV writes
 
 ## Layer 2: Auto-Heal (Retry Logic)
 
-Worker must:
-
-- Retry runner_call up to 3 times on:
-  - network error
-  - 5xx
-  - timeout
-
-- Exponential backoff
-
-After 3 failures:
-  status = error
-  error_code = "runner_failed"
-
-System should attempt self-recovery before alerting.
-
----
+Worker retries runner_call up to 3 times on: network error, 5xx, timeout.
+Exponential backoff.
+After 3 failures: status = error, error_code = "runner_failed", alert triggered.
 
 ## Layer 3: Stuck Job Detection (Cron)
 
-Cloudflare Cron Trigger (every 5 minutes):
+Cloudflare Cron: `*/5 * * * *`
 
-- Scan KV
-- Find jobs:
-    status = running
-    updated_at older than 10 minutes
+Every 5 minutes:
+- Scan KV prefix `job:`
+- If status == running AND updated_at > 10 min ago → mark error, error_code = "timeout", send alert
 
-- Mark:
-    status = error
-    error_code = "timeout"
-
-- Trigger alert
-
----
+Optimization: KV metadata (status + updated_at) stored on job: keys.
+Cron uses metadata from list() — O(stuck jobs only), not O(all jobs).
+Pagination implemented.
 
 ## Layer 4: Mobile Alerting
 
-Alert channel: Pushover
+Channel: Pushover
 
-Worker sends push notification when:
-- job transitions to error
-- stuck job detected
-- runner repeatedly fails
+Triggers: runner failed after retries, stuck job detected, job transitions to error.
+Alert contains: job_id, error_code, group, mode.
+`alert_sent` flag prevents duplicates.
 
-Alert includes:
-- job_id
-- error_code
-- group
-- mode
+## Layer 5: Debug Ergonomics (Future)
 
-Goal:
-Phone notification within 1–5 minutes of production failure.
-
----
-
-## Layer 5: Debug Ergonomics
-
-Future additions:
 - CLI script: fetch job state + worker logs + runner logs by job_id
 - UI button: "Copy debug info"
 
-job_id is operational case number.
+---
+
+# 9. Analytics — Server-Side (LIVE) + Marketing Site (LIVE)
+
+## Worker Events
+
+| Event | Trigger |
+|-------|---------|
+| enqueue_success | Job enqueued |
+| job_done | Job completed |
+| job_error | Job failed |
+| download_clicked | Download initiated |
+
+Properties: non-blocking (ctx.waitUntil), fail-silent, no PII.
+Distinct ID: `clerk:{userId}` or `ip:{ip}`
+EU host: https://eu.posthog.com
+Requires: `POSTHOG_API_KEY` secret in Worker.
+
+## Next.js App Events
+
+All use `distinct_id = clerk:{userId}`.
+
+| Event | File | Properties |
+|-------|------|------------|
+| billing_view | app/api/analytics/billing-view/route.ts | source, kind, success, canceled, plan_before |
+| upgrade_clicked | app/api/analytics/billing-view/route.ts | source, kind, entry, plan_before |
+| checkout_started | app/api/stripe/checkout/route.ts | interval, source, kind, plan_before |
+| checkout_completed | app/api/stripe/webhook/route.ts | source, kind, interval, price_id, plan_after |
+| portal_opened | app/api/stripe/portal/route.ts | plan_before, entry |
+| subscription_updated | app/api/stripe/webhook/route.ts | status, plan_after |
+| subscription_deleted | app/api/stripe/webhook/route.ts | status, plan_after |
+| size_requested | app/api/size-request/route.ts | size, page, user_email, plan |
+
+**Critical:** All `posthogCapture()` calls MUST be awaited on Cloudflare Pages edge runtime. Without await, edge worker terminates before fetch completes and events are silently dropped. Applies to all route handlers using `export const runtime = "edge"`.
+
+## Pattern Tracking Events
+
+| Event | Distinct ID | Properties |
+|-------|-------------|------------|
+| jwt_verification_failed | "system" | error, jwks_url |
+| rate_limit_hit | userId | route, limit, plan |
+| active_job_cap_hit | userId | plan, active, max |
 
 ---
 
-SnapToSize is:
-- Self-healing
-- Self-monitoring
-- Push-alert enabled
-- Production-safe without live supervision
+# 9.5 Email List & Lead Capture (PLANNED)
 
-## 8.2 JWT Diagnostic Logging (LIVE — 2026-03-03)
+## Overview
 
-Worker includes persistent jwt_fail_reason logs for JWT verification failures.
+Email capture system for marketing site lead generation using Resend Audience.
 
-Logged failure reasons:
-- kid_not_found — signing key mismatch (JWKS doesn't contain token's kid)
-- kid_not_found_after_refresh — kid still missing after JWKS cache refresh
-- signature_invalid — token signature doesn't match
-- expired — token past exp claim
-- wrong_alg — algorithm not RS256
-- jwt_issuer_mismatch — iss claim doesn't match CLERK_ISSUER
+**Status:** Specification complete, not yet implemented.
 
-These logs fire only on errors, cost nothing in normal operation,
-and are critical for diagnosing auth issues in production.
+**Purpose:** Capture leads from marketing site, deliver lead magnet (PDF), nurture via 3-email sequence.
 
-## 8.3 Known Technical Debt & Future Optimizations
+---
 
-**Legacy dual KV write (LOW priority):**
-- updateJobState writes to both `job:{id}` (new) and `{id}` (legacy).
-- Frontend currently reads `{id}` via /status endpoint.
-- When frontend migrates to read `job:{id}`, remove legacy write to halve KV writes.
+## Worker API Endpoint
 
-**KV race conditions (LOW priority, non-critical):**
-- Rate limit, quota, and active job counters use read-modify-write on KV.
-- No atomic increment available in KV — theoretical race under concurrent requests from same user.
-- Impact: a user might occasionally bypass a limit by 1 request.
-- Fix if needed: migrate counters to Durable Objects for atomic operations.
-- Not worth fixing until proven problematic at scale.
+### POST /subscribe
 
-**JWKS cache is in-memory (INFO):**
-- JWKS keys cached 10 min in Worker memory.
-- Cloudflare Workers are stateless — cache resets per isolate.
-- At high concurrency, multiple isolates may each fetch JWKS independently.
-- Not a problem — Clerk JWKS endpoint handles this fine.
+**Purpose:** Add email to Resend Audience and trigger welcome sequence.
 
-## 8.4 Multi-Channel Alerting System (LIVE — 2026-03-04)
+**Authentication:** Public endpoint (no auth required).
 
-Production error monitoring with redundant notification channels.
+**Rate limiting:** 10 requests / 10 minutes per IP (prevent spam).
 
-### Tier 1: Critical Infrastructure Alerts (Pushover + Email)
+**Request:**
+```json
+{
+  "email": "seller@example.com",
+  "source": "hero" | "exit_intent" | "etsy_print_sizes"
+}
+```
 
-Dual-channel alerting for immediate attention:
+**Validation:**
+- Email format validation (RFC 5322)
+- Source must be one of allowed values
 
-**R2 Storage Failures:**
-- Upload failures (/upload, /upload-zip)
-- Download failures (/download-by-key)
-- Alert: "SnapToSize R2 Error"
+**Response (success - 200):**
+```json
+{
+  "success": true,
+  "contact_id": "resend_contact_abc123"
+}
+```
 
-**JWKS Authentication Failures:**
-- Clerk JWKS endpoint unreachable
-- Rate limited: max 1 alert per 15 min (prevents spam)
-- Alert: "SnapToSize Auth Error"
+**Response (validation error - 400):**
+```json
+{
+  "success": false,
+  "error": "Invalid email format"
+}
+```
 
-**Job Failures:**
-- Runner failed after 3 retries
-- Stuck jobs detected by cron (>10 min)
-- Job timeout errors
-- Alert: "SnapToSize Error"
+**Response (rate limit - 429):**
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded. Try again later."
+}
+```
 
-**Notification Channels:**
-- **Pushover:** Mobile push notifications (priority: 1)
-- **Email:** Resend API via alerts@snaptosize.com
-- Both channels fire simultaneously for redundancy
+**Response (server error - 500):**
+```json
+{
+  "success": false,
+  "error": "Failed to subscribe. Please try again."
+}
+```
 
-**Required Secrets:**
-- PUSHOVER_TOKEN
-- PUSHOVER_USER_KEY
-- RESEND_API_KEY
-- ALERT_EMAIL
+---
 
-### Tier 2: Pattern Tracking (PostHog Events)
+## Resend Integration
 
-Non-blocking events for dashboard analysis and pattern detection:
+### Audience Configuration
 
-**Authentication Issues:**
-- Event: `jwt_verification_failed`
-- Properties: error, jwks_url
-- Distinct ID: "system"
+**Resend Audience ID:** Stored in `RESEND_AUDIENCE_ID` (Worker secret).
 
-**Abuse Patterns:**
-- Event: `rate_limit_hit`
-- Properties: route, limit, plan
-- Tracks per-user abuse patterns
+**Audience Name:** "SnapToSize Email List"
 
-- Event: `active_job_cap_hit`
-- Properties: plan, active, max
-- Tracks concurrency pressure by plan tier
+**API endpoint:** `https://api.resend.com/audiences/{audience_id}/contacts`
 
-**Implementation:**
-- All PostHog captures use `ctx.waitUntil()` (non-blocking)
-- Fail-silent pattern (analytics never breaks app)
-- Dashboard setup in PostHog UI for trend analysis
+**Method:** POST
 
-### Tier 3: Logging (Cloudflare Workers Logs)
+**Headers:**
+```
+Authorization: Bearer {RESEND_API_KEY}
+Content-Type: application/json
+```
 
-Structured JSON logging via `wLog()` helper:
-- Request-level operations
-- Runner API calls
-- KV operations
-- Manual review via Cloudflare dashboard
+**Body:**
+```json
+{
+  "email": "seller@example.com",
+  "unsubscribed": false,
+  "first_name": null,
+  "last_name": null
+}
+```
 
-**Belt + Suspenders Philosophy:**
-Critical failures trigger both immediate alerts (Tier 1) AND event tracking (Tier 2) for post-mortem analysis.
+### Error Handling
 
-## 8.5 Frontend Error Monitoring (Sentry — LIVE)
+**Duplicate email:**
+- Resend returns 400 with "Contact already exists"
+- **Worker behavior:** Return success (silent, no user-facing error)
+- Rationale: User shouldn't see error for re-subscribing
 
-Sentry SDK (@sentry/nextjs) integrated for production error tracking.
+**Invalid email:**
+- Resend returns 400 with validation error
+- **Worker behavior:** Return 400 to client with "Invalid email format"
 
-**Implementation:**
+**Resend API failure (5xx, timeout):**
+- **Worker behavior:** Log error, send Pushover alert, return 500 to client
+- Alert message: "SnapToSize Email Capture Error — Resend API failure"
+
+---
+
+## Automated Email Sequence
+
+All emails configured in Resend dashboard with automated triggers.
+
+### Email 1: Welcome + PDF (Immediate)
+
+**Trigger:** Contact added to Resend Audience
+
+**From:** alerts@snaptosize.com
+
+**Subject:** "Your Free Etsy Print Size Cheat Sheet"
+
+**Template ID:** `welcome-pdf-delivery` (created in Resend)
+
+**Attachment:**
+- Filename: `etsy-print-size-cheat-sheet.pdf`
+- Hosted: `https://snaptosize.com/assets/etsy-print-size-cheat-sheet.pdf`
+- Delivery: Resend attachment
+
+**Content:**
+- Welcome message
+- Brief intro to SnapToSize
+- PDF download link (fallback if attachment fails)
+- Unsubscribe link (Resend automatic)
+
+---
+
+### Email 2: Sizing Mistakes Guide (Day 3)
+
+**Trigger:** 3 days after Email 1
+
+**From:** alerts@snaptosize.com
+
+**Subject:** "6 Common Etsy Print Sizing Mistakes (and how to avoid them)"
+
+**Template ID:** `sizing-mistakes-guide`
+
+**Content:**
+- List of 6 common mistakes
+- Solutions for each
+- Soft CTA: Link to /etsy-print-sizes
+- Unsubscribe link
+
+---
+
+### Email 3: Product CTA (Day 7)
+
+**Trigger:** 7 days after Email 1
+
+**From:** alerts@snaptosize.com
+
+**Subject:** "Stop spending 3 hours per listing"
+
+**Template ID:** `product-cta`
+
+**Content:**
+- Problem: Manual resizing takes 1–3 hours per listing
+- Solution: SnapToSize automates the entire workflow
+- Social proof: "Over 18,000 size packs generated"
+- **CTA:** "Start Free" → https://app.snaptosize.com
+- Unsubscribe link
+
+---
+
+## Analytics & Tracking
+
+### PostHog Events
+
+**Worker events (POST /subscribe):**
+
+| Event | Trigger | Properties |
+|-------|---------|------------|
+| `email_capture_attempted` | /subscribe called | `source`, `email_hash` (SHA256 for privacy) |
+| `email_capture_success` | Successfully added to Resend | `source`, `contact_id` |
+| `email_capture_duplicate` | Email already in list | `source` |
+| `email_capture_error` | Resend API failure | `source`, `error_type` |
+
+**Distinct ID:** `anonymous` (no user tracking on marketing site)
+
+**Non-blocking:** All PostHog calls via `ctx.waitUntil()`.
+
+---
+
+### Marketing Site Events
+
+**Component-level events (Next.js):**
+
+| Event | Trigger | Properties |
+|-------|---------|------------|
+| `email_capture_view` | EmailCapture component rendered | `source`, `variant` |
+| `email_capture_submitted` | Form submitted | `source`, `variant` |
+
+**Implementation:** Client-side PostHog SDK on marketing site — LIVE (2026-03-09).
+- `posthog-js` installed in `app-next`
+- `PostHogProvider` component: `app-next/components/PostHogProvider.tsx`
+- Wraps marketing layout, captures `$pageview` on every route change
+- Env vars: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` (must be set in Cloudflare Pages dashboard)
+
+---
+
+## Privacy & Compliance
+
+### Data Storage
+
+**What is stored:**
+- Email address only
+- No name, phone, or other PII
+
+**Where:**
+- Resend Audience (primary storage)
+- No email storage in SnapToSize databases or KV
+
+**Retention:**
+- Until user unsubscribes
+- Unsubscribe link in all emails (Resend automatic)
+
+---
+
+### Privacy Policy Update
+
+**Required:** Update `/privacy` page with:
+- Email collection disclosure
+- Purpose: Lead magnet delivery + marketing emails
+- Third-party: Resend for email delivery
+- User rights: Unsubscribe anytime
+- Data retention: Until unsubscribe
+
+---
+
+## Required Secrets (Worker)
+
+| Secret | Purpose |
+|--------|---------|
+| `RESEND_API_KEY` | Already exists (used for alerts) |
+| `RESEND_AUDIENCE_ID` | **New** — Audience ID for email list |
+
+**Setup:**
+```bash
+wrangler secret put RESEND_AUDIENCE_ID
+# Enter: aud_abc123xyz (from Resend dashboard)
+```
+
+---
+
+## PDF Asset
+
+**File:** `app-next/public/assets/etsy-print-size-cheat-sheet.pdf`
+
+**Hosting:** Served from marketing site (Cloudflare Pages)
+
+**URL:** `https://snaptosize.com/assets/etsy-print-size-cheat-sheet.pdf`
+
+**Contents:**
+- All 5 ratio groups (2:3, 3:4, 4:5, ISO, extras)
+- Pixel dimensions at 300 DPI for each size
+- File naming conventions
+- Quick reference table
+- SnapToSize branding + "Start Free" CTA at bottom
+
+**Format:** 1-page PDF, optimized for print or digital viewing.
+
+---
+
+## Implementation Checklist
+
+**Worker (services/worker):**
+- [ ] Add `POST /subscribe` endpoint
+- [ ] Integrate Resend Audience API
+- [ ] Add rate limiting (10 req / 10 min per IP)
+- [ ] Add error handling + Pushover alerts
+- [ ] Add PostHog events (email_capture_*)
+- [ ] Add `RESEND_AUDIENCE_ID` secret
+
+**Marketing Site (app-next):**
+- [ ] Create `components/EmailCapture.tsx`
+- [ ] Create `components/ExitIntentModal.tsx`
+- [ ] Add EmailCapture to hero section
+- [ ] Add EmailCapture to bottom of /etsy-print-sizes
+- [ ] Implement exit-intent trigger
+- [ ] Add client-side PostHog events
+- [ ] Create PDF asset: `etsy-print-size-cheat-sheet.pdf`
+- [ ] Update `/privacy` page
+
+**Resend Dashboard:**
+- [ ] Create Audience: "SnapToSize Email List"
+- [ ] Create email template: `welcome-pdf-delivery`
+- [ ] Create email template: `sizing-mistakes-guide`
+- [ ] Create email template: `product-cta`
+- [ ] Set up automated sequence (Day 0, Day 3, Day 7)
+- [ ] Test sequence with test email
+
+---
+
+# 10. Multi-Channel Alerting (LIVE — 2026-03-04)
+
+## Tier 1: Critical Infrastructure (Pushover + Email)
+
+**R2 Storage Failures:** /upload, /upload-zip, /download-by-key → "SnapToSize R2 Error"
+**JWKS Auth Failures:** Clerk JWKS unreachable → "SnapToSize Auth Error" (rate limited: 1 alert/15 min)
+**Job Failures:** Runner failed, stuck jobs, timeout → "SnapToSize Error"
+
+Channels fire simultaneously. Required secrets: PUSHOVER_TOKEN, PUSHOVER_USER_KEY, RESEND_API_KEY, ALERT_EMAIL.
+
+## Tier 2: Pattern Tracking (PostHog)
+
+Non-blocking via ctx.waitUntil(). Fail-silent. Dashboard in PostHog UI.
+
+## Tier 3: Logging (Cloudflare Workers Logs)
+
+Structured JSON via wLog() helper. Request-level, runner API calls, KV operations.
+
+**Philosophy:** Critical failures trigger Tier 1 (immediate alert) AND Tier 2 (event tracking) for post-mortem.
+
+---
+
+# 11. Frontend Error Monitoring (Sentry — LIVE — 2026-03-04)
+
+Sentry SDK (@sentry/nextjs):
 - Client, server, and edge runtime configs
 - Instrumentation hook for Next.js App Router
-- Source maps uploaded automatically on build
+- Source maps uploaded on build
 - React ErrorBoundary for crash recovery
 
-**Instrumented Routes:**
-- `/api/stripe/webhook` — signature + processing errors
-- `/api/stripe/checkout` — session creation failures
-- `/api/stripe/portal` — customer/portal errors
-- All React components via ErrorBoundary
+Instrumented routes:
+- /api/stripe/webhook — signature + processing errors
+- /api/stripe/checkout — session creation failures
+- /api/stripe/portal — customer/portal errors
 
-**Alerts Configured (sentry.io):**
-- 🚨 CRITICAL: Webhook failures → immediate email
-- ⚠️ HIGH: Checkout failures → email every 5 min
-- 📋 MEDIUM: Portal failures → email every 30 min
+Alerts: Webhook failures → immediate email | Checkout failures → email every 5 min | Portal failures → every 30 min
 
-**Environment Variables:**
-- NEXT_PUBLIC_SENTRY_DSN (Cloudflare Pages secret)
-- SENTRY_AUTH_TOKEN (for source map upload)
-
-**Production Ready:** 2026-03-04
-All revenue-critical paths monitored with email alerts.
-
-# 9. Strategic Positioning
-
-SnapToSize = Etsy-native print pack generator.
-
-Differentiators unchanged.
+Env vars: NEXT_PUBLIC_SENTRY_DSN, SENTRY_AUTH_TOKEN
 
 ---
 
-# 10. Next Phase Roadmap
+# 12. JWT Diagnostic Logging (LIVE — 2026-03-03)
 
-## Immediate Next Steps
+Worker logs jwt_fail_reason on all JWT verification failures:
 
-1. PostHog dashboard setup (manual)
-   - Create "SnapToSize – Upgrade Attribution" dashboard in PostHog UI
-   - Add funnel: upgrade_clicked → checkout_started → checkout_completed
-   - Add trends: checkout_completed, upgrade_clicked, billing_view (daily by source)
+| Reason | Meaning |
+|--------|---------|
+| kid_not_found | Signing key mismatch — JWKS doesn't contain token's kid |
+| kid_not_found_after_refresh | kid still missing after JWKS cache refresh |
+| signature_invalid | Token signature doesn't match |
+| expired | Token past exp claim |
+| wrong_alg | Algorithm not RS256 |
+| jwt_issuer_mismatch | iss claim doesn't match CLERK_ISSUER |
 
-2. Landing → App attribution (NOT YET BUILT)
-   - Add UTM param capture on marketing site (snaptosize.com)
-   - Pass UTM through to app signup flow
-   - Track landing_click event with UTM properties
+Logs fire only on errors. Zero cost in normal operation.
 
-3. First export tracking (NOT YET BUILT)
-   - Correlate Worker enqueue_success with user's first-ever export
-   - Track first_export event with mode (pack/single)
+---
 
-4. Conversion architecture
-   - Ensure clean separation:
-     snaptosize.com → marketing
-     app.snaptosize.com → product
-   - No embedding of app inside marketing
-   - Clear upgrade path
+# 13. Known Technical Debt
 
-## Phase 3: Hardening (COMPLETE — 2026-03-03)
+**Legacy dual KV write (LOW):** Remove legacy `{id}` write once frontend reads `job:{id}`.
 
-- ~~Abuse prevention~~ DONE
-- ~~Concurrency caps~~ DONE
-- ~~Logging~~ DONE
-- ~~Monitoring~~ DONE
-- ~~Production alerting~~ DONE
+**KV race conditions (LOW, non-critical):** Rate limit/quota/active job counters use read-modify-write. No atomic increment in KV. Impact: user may occasionally bypass limit by 1 request. Fix with Durable Objects if proven problematic at scale.
+
+**JWKS cache in-memory (INFO):** Cached 10 min per isolate. Multiple isolates may fetch independently. Not a problem — Clerk handles this fine.
+
+---
+
+# 14. What Is NOT Built Yet (Technical)
+
+- **Email capture system** (specification complete in §9.5, implementation pending)
+- Subscription lifecycle UX polish (cancel_at_period_end display, portal clarity)
+- Client-side funnel tracking on marketing site (UTM attribution — pageview tracking LIVE, UTM attribution pending)
+- First export event tracking (Worker enqueue_success correlation)
 - Remove debug endpoints (LOW priority)
+- CLI debug script (Layer 5)
 
 ---
 
-# 11. Important Rules Going Forward
+# 15. Implementation Rules (for Claude Code)
 
-- No Worker contract breakage.
-- Stripe is subscription authority.
-- Clerk mirrors state.
-- No architecture drift.
-- No client-side plan trust.
-- Remove demo bypass before scale.
-
-- No new product features until:
-  - ≥ 50 paying users
-  - ≥ 7% free → pro conversion validated
+- No Worker contract breakage
+- Stripe is subscription authority
+- Clerk mirrors state only
+- No architecture drift
+- No client-side plan trust
+- No new systems without explicit approval
 - Growth > Features
+- No new product features until ≥ 50 paying users AND ≥ 7% free → pro conversion
+
 ---
 
-# 12. Current System Status
+# 16. Marketing Site Performance (LIVE — 2026-03-08)
 
-Core engine + billing + reliability + abuse protection + observability stack complete.
+## Hero Background Optimization
 
-**Infrastructure:**
-- Clerk production instance live (clerk.snaptosize.com)
-- Stripe production checkout + portal + webhook verified
-- Cloudflare Workers Paid plan active (2026-03-03)
-- Resend email verified domain (alerts@snaptosize.com)
+**Problem:** Hero_image.png (2.6MB) caused 76s LCP on mobile.
 
-**Monitoring & Alerts:**
-- Multi-channel alerting: Pushover + Email (2026-03-04)
-- PostHog analytics + error event tracking (2026-03-01)
-- Sentry error monitoring (Next.js frontend, 2026-03-04)
-- Cron stuck-job detection optimized with KV metadata (2026-03-03)
+**Solution:** Converted to WebP via sharp (quality 80) → 88KB (97% reduction).
 
-**Free Tier Optimization:**
-- Updated limits: 2 packs/day, 5 singles/day (2026-03-04)
-- Remaining counts in API responses
-- Conditional display in frontend (urgency-based)
+**Implementation:**
+- `public/Hero_image.webp` (88KB) — primary source
+- `public/Hero_image.png` (2.6MB) — fallback for browsers without WebP
+- `HeroSection.tsx` uses `<picture>` element:
+  ```html
+  <picture>
+    <source srcSet="/Hero_image.webp" type="image/webp" />
+    <img src="/Hero_image.png" fetchpriority="high" loading="eager" ... />
+  </picture>
+  ```
 
-**Milestones:**
-- First paying Pro customer live (2026-03-03)
-- Comprehensive observability deployed (2026-03-04)
+**Constraint:** `images: { unoptimized: true }` in next.config — Cloudflare Pages limitation. Do not change.
 
-# 13. Growth System (ACTIVE PHASE)
+**Rule:** All new hero/background images on marketing pages should follow the same `<picture>` WebP + PNG pattern.
 
-## 13.1 Ideal Customer Profile (Locked)
-
-Primary ICP:
-- Etsy sellers selling DIGITAL wall art / printables
-- 10–200 listings OR consistent sales history
-- Already earns > $500/mo (not beginners)
-- Pain: resizing, packaging, naming, Etsy upload compliance
-
-Secondary ICP:
-- POD creators scaling listing count
-- Bundle sellers needing consistent size sets
-
-Not targeting (by default):
-- Hobby/one-off Canva users
-- Generic “image resizer” traffic
-- People who don’t sell on Etsy
-
-## 13.2 North Star Metric (Locked)
-
-Primary:
-- Weekly Pro activations (count)
-
-Secondary:
-- Free → Pro conversion rate
-- Time-to-first-export (TTFE)
-- Upgrade click rate after 402
-- Job success rate (error %)
-
-Targets (initial):
-- Free → Pro conversion ≥ 7% (minimum viable)
-- Free → Pro conversion ≥ 10% (goal)
-- TTFE ≤ 60 seconds median
-- Job success rate ≥ 99%
-
-Activation definition:
-
-User is considered Activated when:
-- First successful export (pack OR single)
-- Within first session
-- No 402 encountered
-
-Activation rate target:
-≥ 60%
-
-## 13.3 Funnel Definition (Tracked — LIVE)
-
-Full upgrade funnel tracked in PostHog (verified 2026-03-01):
-
-| Step | Event | Status |
-|------|-------|--------|
-| Billing page view | billing_view | LIVE |
-| Upgrade click | upgrade_clicked | LIVE |
-| Checkout started | checkout_started | LIVE |
-| Checkout completed | checkout_completed | LIVE |
-| Portal opened | portal_opened | LIVE |
-| Subscription changed | subscription_updated | LIVE |
-| Subscription canceled | subscription_deleted | LIVE |
-
-Not yet tracked:
-- Landing → App click (requires marketing site instrumentation)
-- App → First export (requires Worker event correlation)
-
-PostHog dashboard: "SnapToSize – Upgrade Attribution" (manual setup in PostHog UI).
-
-Implementation rule:
-- Every step is a PostHog event with consistent distinct_id (clerk:{userId}) + properties (source, kind, plan_before/plan_after).
-
-## 13.4 Marketing Execution Channels (3 lanes)
-
-Lane A — SEO content engine:
-- Print size guides (ratios + exact Etsy sizes)
-- “How to sell printables on Etsy” content
-- Size/ratio calculators (lead capture)
-- Long-tail keyword capture
-
-Lane B — Etsy-native positioning:
-- Messaging: “Built for Etsy sellers”
-- Emphasize: exact ratios + naming + zip packs + no cropping + under 20MB compliance
-
-Lane C — Direct niche distribution:
-- Reddit: Etsy sellers subreddits
-- Facebook groups (digital downloads / printables)
-- Pinterest (printable audience)
-- IndieHackers / build-in-public
-
-## 13.5 Conversion Optimization
-
-**Implemented (2026-03-04):**
-- ✅ Show free remaining counts (quick + packs)
-  - Backend: Worker sends `remaining` in enqueue response
-  - Frontend: Conditional display (batch ≤ 1, quick ≤ 2)
-  - Creates urgency without noise
-
-**Planned experiments:**
-- Inline upsell after 402 (one-click to billing)
-- Watermark preview + "Remove watermark" CTA
-- Annual plan highlight + anchor pricing
-- Checkout abandonment tracking
-- Exit-intent paywall on billing
-
-## 13.6 Revenue Tracking (Stripe source of truth)
-
-Track weekly:
-- MRR
-- Net revenue
-- Pro activations
-- Churn
-- Annual vs monthly split
-
-Milestone path:
-- 10 paying users → validate willingness
-- 100 paying users → validate retention + pricing
-- 500 paying users → prove growth engine
-- 1000+ paying users → scale distribution
-
-Pricing Lock:
-
-- $11.99 monthly
-- $97 yearly
-
-No pricing changes before:
-- 100 paying users
-- Or statistically significant churn data
-
-Reason:
-Do not change price without signal.
 ---
 
-## 13.7 Distribution Priority (LOCKED)
+# 17. OG Images & Social Previews (LIVE — 2026-03-08)
 
-Phase 1 (Validation – 0 → 100 paying users)
+## Generation Method
 
-Primary channel:
-- Pinterest (organic first, ads after baseline)
-- SEO (1–2 high-intent guides only)
+OG images are generated using **Playwright MCP CLI** — automated browser screenshots of hero sections.
 
-Secondary:
-- Direct outreach in Etsy seller communities (manual)
+**Process:**
+1. Start dev server (`npm run dev`)
+2. Use Playwright to navigate to page and screenshot the hero section
+3. Save screenshot as PNG to `public/assets/og/`
+4. Reference in page metadata via `<meta property="og:image">` and `<meta name="twitter:card">`
 
-Not allowed during validation phase:
-- TikTok
-- X
-- YouTube
-- Broad paid ads
-- Multi-channel chaos
+**Files:**
+| Page | OG Image |
+|------|----------|
+| / (homepage) | `/assets/og/home.png` |
+| /etsy-print-sizes | `/assets/og/etsy-print-sizes.png` |
+| /etsy-print-ratios | `/assets/og/etsy-print-ratios.png` |
+| /how-to-sell-digital-downloads-on-etsy | `/assets/og/how-to-sell-digital-downloads-on-etsy.png` |
+| /what-files-to-include-etsy-digital-download | `/assets/og/what-files-to-include-etsy-digital-download.png` |
+| /etsy-20mb-file-limit | `/assets/og/etsy-20mb-file-limit.png` |
 
-Rule:
-One channel must prove repeatable acquisition before adding another.
+**Twitter card:** `summary_large_image` on all pages — shows large preview image when link is shared.
 
-## 13.8 SEO Content (LIVE — 2026-03-03)
-
-### /etsy-print-sizes — SEO Pillar Page (PRODUCTION)
-
-Comprehensive Etsy print sizes guide deployed as primary SEO entry point.
-
-URL: https://snaptosize.com/etsy-print-sizes
-
-SEO implementation:
-- Article schema (datePublished: 2025-02-10, dateModified: 2026-03-03)
-- BreadcrumbList schema (Home → Etsy Print Sizes Guide)
-- FAQPage schema (5 conversion-focused questions)
-- OpenGraph + Twitter Card with custom hero image
-- 4 strategic internal links (/pricing, /sizes, app)
-
-Content structure:
-- Premium hero section (100vh, custom OG image)
-- Visual proof: crop-to-fit vs SnapToSize comparison (Poppies/Koi images)
-- Common Etsy Print Mistakes section (6 cards)
-- Complete ratio tables: 2:3, 3:4, 4:5, ISO A-series, extras (all at 300 DPI)
-- Collapsible FAQ accordion (semantic, accessible)
-- Social proof elements ("Over 18,000 size packs generated")
-- Trust elements (guarantee pills, micro-benefit chips)
-
-Target keywords:
-- "Etsy print sizes"
-- "Etsy print ratios"
-- "300 DPI print sizes"
-- "Etsy 20MB limit"
-
-Navigation:
-- Header: "Print Sizes" → /etsy-print-sizes
-- Footer: "Print Sizes" → /etsy-print-sizes, "All Pack Sizes" → /sizes
-
-Status: Indexed, requested re-indexing 2026-03-03
-
-### /etsy-print-ratios — SEO Supporting Page (PRODUCTION)
-
-Educational page supporting /etsy-print-sizes pillar with ratio explanation content.
-
-URL: https://snaptosize.com/etsy-print-ratios
-
-SEO implementation:
-- Article schema (datePublished: 2026-03-04, dateModified: 2026-03-04)
-- BreadcrumbList schema (Home → Etsy Print Ratios)
-- FAQPage schema (5 questions)
-- OpenGraph + Twitter Card with custom hero image (hero_og_etsy-print-ratios.png)
-- Internal links to pillar page (/etsy-print-sizes) + core pages (/sizes, /pricing, /guide)
-- Bidirectional linking: pillar page links to supporting page (inline + related section)
-
-Content structure:
-- Educational sections explaining ratio groups (2:3, 3:4, 4:5, ISO, extras)
-- Visual infographic with overlay content (ratio boxes)
-- Why ratios matter for Etsy printables
-- Pack structure explanation
-- Product connection copy (non-promotional education)
-
-Target keywords:
-- "etsy print ratios"
-- "etsy printable ratios"
-- "print ratio packs"
-
-Added to sitemap with priority 0.8 (2026-03-04)
-
-Status: Deployed, ready for indexing
-
-## Next Major Build
-
-Growth & Conversion Infrastructure
-
-Focus shifts from backend stability to distribution and revenue optimization.
-
-Scope:
-
-- ~~SEO content layer (Etsy guides, print size resources)~~ DONE (/etsy-print-sizes live 2026-03-03)
-- Conversion copy optimization
-- Pricing experiments
-- ~~Upgrade funnel tracking (checkout_started → checkout_completed)~~ DONE (2026-03-01)
-- Stripe lifecycle UX polish (portal clarity, cancellation flow)
-- Revenue dashboard (MRR, Pro activation rate)
-
-Backend engine is stable and optimized for 1000+ users.
-Now building growth engine.
+**Rule:** When adding new SEO pages, generate an OG image using Playwright and add meta tags for both OpenGraph and Twitter card.
