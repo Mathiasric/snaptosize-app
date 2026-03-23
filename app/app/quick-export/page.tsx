@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useReducer, useRef, useMemo } from "react";
+import { useState, useEffect, useReducer, useRef, useMemo } from "react";
 import { useUser, SignedOut } from "@clerk/nextjs";
 import { UploadZone } from "../components/UploadZone";
 import { GenerateButton } from "../components/GenerateButton";
@@ -18,6 +18,9 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Upload,
+  Layers,
+  X,
 } from "lucide-react";
 import {
   SIZE_CATALOG,
@@ -28,7 +31,6 @@ import {
 } from "../lib/size-catalog";
 import type { CatalogGroup, Orientation } from "../lib/size-catalog";
 import { useQuota } from "../context/QuotaContext";
-import { OnboardingBanner } from "../components/OnboardingBanner";
 import { ImageQualityWarning } from "../components/ImageQualityWarning";
 import { useImageDimensions } from "../hooks/useImageDimensions";
 
@@ -594,38 +596,7 @@ export default function QuickExportPage() {
               onRetry={state.job.status === "error" ? exportSingle : undefined}
             />
           ) : (
-            <>
-              <OnboardingBanner mode="quick-export" />
-              <div className="rounded-xl border border-border bg-surface px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-md bg-accent/10 p-1.5">
-                    <FileImage size={16} className="text-accent-light" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold leading-tight text-foreground">
-                      Your export will appear here
-                    </h3>
-                    <p className="mt-0.5 text-xs leading-tight text-foreground/40">
-                      Export one exact print size as a 300 DPI JPG.
-                    </p>
-                    <ul className="mt-2 space-y-0.5">
-                      <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                        <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                        Single file, exact dimensions
-                      </li>
-                      <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                        <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                        300 DPI print-ready JPG
-                      </li>
-                      <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                        <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                        Perfect for single-size listings
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </>
+            <QuickExportEmptyState />
           )}
 
           {/* Recent Downloads */}
@@ -808,3 +779,88 @@ function QuickJobCard({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Empty State (with integrated onboarding)
+// ---------------------------------------------------------------------------
+
+const ONBOARDING_KEY = "snaptosize_onboarding_dismissed";
+
+function QuickExportEmptyState() {
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem(ONBOARDING_KEY)) setShowGuide(true);
+  }, []);
+
+  function dismiss() {
+    localStorage.setItem(ONBOARDING_KEY, "1");
+    setShowGuide(false);
+  }
+
+  const steps = [
+    { icon: Upload, text: "Upload your artwork" },
+    { icon: Layers, text: "Choose size and orientation" },
+    { icon: Download, text: "Download a print-ready JPG" },
+  ];
+
+  return (
+    <div className="relative rounded-xl border border-border bg-surface px-4 py-4">
+      {showGuide && (
+        <button
+          onClick={dismiss}
+          className="absolute right-2 top-2 rounded-full p-1 text-foreground/30 transition-colors hover:text-foreground/60"
+          aria-label="Dismiss"
+        >
+          <X size={14} />
+        </button>
+      )}
+      <div className="flex items-start gap-3">
+        <div className="rounded-md bg-accent/10 p-1.5">
+          <FileImage size={16} className="text-accent-light" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold leading-tight text-foreground">
+            {showGuide
+              ? "Get print-ready files in seconds"
+              : "Your export will appear here"}
+          </h3>
+          {showGuide ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {steps.map((step, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  {i > 0 && (
+                    <span className="mr-1 text-xs text-foreground/20">&rarr;</span>
+                  )}
+                  <div className="rounded-md bg-accent/15 p-1">
+                    <step.icon size={12} className="text-accent-light" />
+                  </div>
+                  <span className="text-xs text-foreground/60">{step.text}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <p className="mt-0.5 text-xs leading-tight text-foreground/40">
+                Export one exact print size as a 300 DPI JPG.
+              </p>
+              <ul className="mt-2 space-y-0.5">
+                <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
+                  Single file, exact dimensions
+                </li>
+                <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
+                  300 DPI print-ready JPG
+                </li>
+                <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
+                  Perfect for single-size listings
+                </li>
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
