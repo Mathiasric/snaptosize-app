@@ -24,6 +24,7 @@ import {
   getGroupLabel,
 } from "../lib/size-catalog";
 import type { CatalogGroup, Orientation } from "../lib/size-catalog";
+import { useQuota } from "../context/QuotaContext";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -176,6 +177,7 @@ function formatRelativeTime(timestamp: number): string {
 export default function QuickExportPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
+  const { setRemaining: setSharedRemaining } = useQuota();
 
   const isSquare = state.orientation === "Square";
   const effectiveGroup = isSquare ? "SQUARE" : state.group;
@@ -367,6 +369,7 @@ export default function QuickExportPage() {
       // Store remaining quota if provided (free users only)
       if (enqData?.remaining) {
         dispatch({ type: "set_remaining", remaining: enqData.remaining });
+        setSharedRemaining(enqData.remaining);
       }
 
       const sizeLabel = selectedSize

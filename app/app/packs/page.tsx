@@ -9,6 +9,7 @@ import { JobCard } from "../components/JobCard";
 import type { Job, JobStatus } from "../components/JobCard";
 import { GenerateButton } from "../components/GenerateButton";
 import { XCircle, FolderDown, Check, Download, Clock as ClockIcon } from "lucide-react";
+import { useQuota } from "../context/QuotaContext";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -147,6 +148,7 @@ export default function AppPage() {
   const abortRef = useRef<AbortController | null>(null);
   const { user } = useUser();
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
+  const { setRemaining: setSharedRemaining } = useQuota();
 
   const selectedGroups = useMemo(
     () => ALL_KEYS.filter((g) => state.selected[g]),
@@ -349,6 +351,7 @@ export default function AppPage() {
 
         if (enqData?.remaining) {
           dispatch({ type: "set_remaining", remaining: enqData.remaining });
+          setSharedRemaining(enqData.remaining);
         }
 
         dispatch({ type: "set_job", job: { group, jobId, status: "queued" } });
