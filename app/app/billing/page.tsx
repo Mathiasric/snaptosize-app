@@ -176,8 +176,6 @@ function BillingContent() {
               { feature: "Quick Exports", free: "5 / day", pro: "Unlimited" },
               { feature: "ZIP Packs", free: "2 / day", pro: "Unlimited" },
               { feature: "Watermark", free: "Yes", pro: "None" },
-              { feature: "Processing", free: "Standard", pro: "Priority" },
-              { feature: "File quality", free: "300 DPI", pro: "300 DPI" },
             ].map((row) => (
               <div key={row.feature} className="grid grid-cols-3 items-center gap-2">
                 <span className="text-foreground/50">{row.feature}</span>

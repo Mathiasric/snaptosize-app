@@ -415,7 +415,6 @@ export default function AppPage() {
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
         <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
-          <OnboardingBanner mode="packs" />
           <UploadZone
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
@@ -522,35 +521,38 @@ export default function AppPage() {
               return <JobCard key={g} group={g} job={job} />;
             })
           ) : (
-            <div className="rounded-xl border border-border bg-surface px-4 py-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-md bg-accent/10 p-1.5">
-                  <FolderDown size={16} className="text-accent-light" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold leading-tight text-foreground">
-                    Your Etsy-ready ZIP packs will appear here.
-                  </h3>
-                  <p className="mt-0.5 text-xs leading-tight text-foreground/40">
-                    Select packs and click Generate.
-                  </p>
-                  <ul className="mt-2 space-y-0.5">
-                    <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                      300 DPI print-ready
-                    </li>
-                    <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                      Exact aspect ratios
-                    </li>
-                    <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                      Etsy-friendly file names
-                    </li>
-                  </ul>
+            <>
+              <OnboardingBanner mode="packs" />
+              <div className="rounded-xl border border-border bg-surface px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-md bg-accent/10 p-1.5">
+                    <FolderDown size={16} className="text-accent-light" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold leading-tight text-foreground">
+                      Your Etsy-ready ZIP packs will appear here.
+                    </h3>
+                    <p className="mt-0.5 text-xs leading-tight text-foreground/40">
+                      Select packs and click Generate.
+                    </p>
+                    <ul className="mt-2 space-y-0.5">
+                      <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
+                        <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
+                        300 DPI print-ready
+                      </li>
+                      <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
+                        <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
+                        Exact aspect ratios
+                      </li>
+                      <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
+                        <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
+                        Etsy-friendly file names
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Recent Downloads */}
