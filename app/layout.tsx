@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Suspense } from "react";
 import { PostHogProvider } from "./components/PostHogProvider";
+import { QuotaProvider } from "./app/context/QuotaContext";
 import { PartnerRefCapture } from "./components/PartnerRefCapture";
 import { Header } from "./components/Header";
 import "./globals.css";
@@ -43,11 +44,13 @@ export default function RootLayout({
       >
         <ClerkProvider>
           <PostHogProvider>
-            <Suspense fallback={null}>
-              <PartnerRefCapture />
-            </Suspense>
-            <Header />
-            {children}
+            <QuotaProvider>
+              <Suspense fallback={null}>
+                <PartnerRefCapture />
+              </Suspense>
+              <Header />
+              {children}
+            </QuotaProvider>
           </PostHogProvider>
         </ClerkProvider>
       </body>
