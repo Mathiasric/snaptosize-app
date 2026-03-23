@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useReducer, useRef, useMemo } from "react";
+import { useUser, SignedOut } from "@clerk/nextjs";
 import { UploadZone } from "../components/UploadZone";
 import { GenerateButton } from "../components/GenerateButton";
+import { UpsellBanner } from "../components/UpsellBanner";
+import { SignupNudge } from "../components/SignupNudge";
 import {
   XCircle,
   Download,
@@ -178,6 +181,8 @@ export default function QuickExportPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
   const { setRemaining: setSharedRemaining } = useQuota();
+  const { user } = useUser();
+  const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
 
   const isSquare = state.orientation === "Square";
   const effectiveGroup = isSquare ? "SQUARE" : state.group;
@@ -643,6 +648,18 @@ export default function QuickExportPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Post-export banners */}
+          {state.phase === "done" && state.job?.status === "done" && (
+            <>
+              <SignedOut>
+                <SignupNudge />
+              </SignedOut>
+              {user && !isPro && (
+                <UpsellBanner mode="quick-export" />
+              )}
+            </>
           )}
         </div>
       </div>
