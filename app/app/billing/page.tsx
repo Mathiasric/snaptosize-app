@@ -154,11 +154,47 @@ function BillingContent() {
           </p>
         )}
         {isLoaded && !isPro && (
-          <p className="mt-1 text-xs text-foreground/40">
-            Limits: 5 Quick Exports/day &bull; 2 Packs/day
-          </p>
+          <div className="mt-1 space-y-0.5 text-xs text-foreground/40">
+            <p>5 Quick Exports per day</p>
+            <p>2 ZIP Packs per day</p>
+            <p>Watermark on all exports</p>
+          </div>
         )}
       </div>
+
+      {/* Feature comparison — only for free users */}
+      {isLoaded && !isPro && (
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Free vs Pro</h3>
+          <div className="space-y-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 border-b border-border pb-2 text-xs font-medium">
+              <span />
+              <span className="text-center text-foreground/30">Free</span>
+              <span className="text-center text-accent-light">Pro</span>
+            </div>
+            {[
+              { feature: "Quick Exports", free: "5 / day", pro: "Unlimited" },
+              { feature: "ZIP Packs", free: "2 / day", pro: "Unlimited" },
+              { feature: "Watermark", free: "Yes", pro: "None" },
+              { feature: "Processing", free: "Standard", pro: "Priority" },
+              { feature: "File quality", free: "300 DPI", pro: "300 DPI" },
+            ].map((row) => (
+              <div key={row.feature} className="grid grid-cols-3 items-center gap-2">
+                <span className="text-foreground/50">{row.feature}</span>
+                <span className="text-center text-foreground/30">{row.free}</span>
+                <span className="text-center font-medium text-accent-light">{row.pro}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Social proof */}
+      {isLoaded && !isPro && (
+        <p className="text-center text-xs text-foreground/30">
+          Trusted by Etsy sellers who skip the Photoshop grind.
+        </p>
+      )}
 
       {/* Manage subscription — Pro only */}
       {isLoaded && isPro && (
@@ -212,7 +248,7 @@ function BillingContent() {
                   $8.08 per month, billed annually. Cancel anytime.
                 </p>
                 <p className="mt-0.5 text-xs text-foreground/30">
-                  Most sellers choose Yearly
+                  Less than the cost of one Etsy listing fee per month.
                 </p>
               </div>
               <div className="shrink-0 text-right">
