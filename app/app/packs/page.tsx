@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useReducer, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUser, SignedOut } from "@clerk/nextjs";
 import { UploadZone } from "../components/UploadZone";
 import { PackSelector, ALL_KEYS, PACKS } from "../components/PackSelector";
 import type { Group } from "../components/PackSelector";
@@ -10,6 +10,8 @@ import type { Job, JobStatus } from "../components/JobCard";
 import { GenerateButton } from "../components/GenerateButton";
 import { XCircle, FolderDown, Check, Download, Clock as ClockIcon } from "lucide-react";
 import { useQuota } from "../context/QuotaContext";
+import { UpsellBanner } from "../components/UpsellBanner";
+import { SignupNudge } from "../components/SignupNudge";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -557,6 +559,18 @@ export default function AppPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Post-export banners */}
+          {state.phase === "done" && (
+            <>
+              <SignedOut>
+                <SignupNudge />
+              </SignedOut>
+              {user && !isPro && (
+                <UpsellBanner mode="packs" />
+              )}
+            </>
           )}
         </div>
       </div>
