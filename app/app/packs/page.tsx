@@ -559,20 +559,7 @@ export default function AppPage() {
 // Empty State (with integrated onboarding)
 // ---------------------------------------------------------------------------
 
-const ONBOARDING_KEY = "snaptosize_onboarding_dismissed";
-
 function EmptyState({ mode }: { mode: "packs" | "quick-export" }) {
-  const [showGuide, setShowGuide] = useState(false);
-
-  useEffect(() => {
-    if (!localStorage.getItem(ONBOARDING_KEY)) setShowGuide(true);
-  }, []);
-
-  function dismiss() {
-    localStorage.setItem(ONBOARDING_KEY, "1");
-    setShowGuide(false);
-  }
-
   const steps = [
     { icon: Upload, text: "Upload your artwork" },
     { icon: Layers, text: "Pick your ratio packs" },
@@ -581,60 +568,27 @@ function EmptyState({ mode }: { mode: "packs" | "quick-export" }) {
 
   return (
     <div className="relative rounded-xl border border-border bg-surface px-4 py-4">
-      {showGuide && (
-        <button
-          onClick={dismiss}
-          className="absolute right-2 top-2 rounded-full p-1 text-foreground/30 transition-colors hover:text-foreground/60"
-          aria-label="Dismiss"
-        >
-          <X size={14} />
-        </button>
-      )}
       <div className="flex items-start gap-3">
         <div className="rounded-md bg-accent/10 p-1.5">
           <FolderDown size={16} className="text-accent-light" />
         </div>
         <div>
           <h3 className="text-sm font-semibold leading-tight text-foreground">
-            {showGuide
-              ? "Get print-ready files in seconds"
-              : "Your Etsy-ready ZIP packs will appear here."}
+            Get print-ready files in seconds
           </h3>
-          {showGuide ? (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              {steps.map((step, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  {i > 0 && (
-                    <span className="mr-1 text-xs text-foreground/20">&rarr;</span>
-                  )}
-                  <div className="rounded-md bg-accent/15 p-1">
-                    <step.icon size={12} className="text-accent-light" />
-                  </div>
-                  <span className="text-xs text-foreground/60">{step.text}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {i > 0 && (
+                  <span className="mr-1 text-xs text-foreground/20">&rarr;</span>
+                )}
+                <div className="rounded-md bg-accent/15 p-1">
+                  <step.icon size={12} className="text-accent-light" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <p className="mt-0.5 text-xs leading-tight text-foreground/40">
-                Select packs and click Generate.
-              </p>
-              <ul className="mt-2 space-y-0.5">
-                <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                  <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                  300 DPI print-ready
-                </li>
-                <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                  <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                  Exact aspect ratios
-                </li>
-                <li className="flex items-center gap-1.5 text-xs leading-tight text-foreground/25">
-                  <span className="h-1 w-1 shrink-0 rounded-full bg-foreground/20" />
-                  Etsy-friendly file names
-                </li>
-              </ul>
-            </>
-          )}
+                <span className="text-xs text-foreground/60">{step.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

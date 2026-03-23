@@ -67,15 +67,11 @@ test.describe("Round 3 — Visual verification", () => {
 
   test("packs — full page screenshot (no upload)", async ({ page }) => {
     await page.goto(`${BASE}/app/packs`);
-    await page.evaluate(() => localStorage.removeItem("snaptosize_onboarding_dismissed"));
-    await page.goto(`${BASE}/app/packs`);
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: "test-results/r3-packs-default.png", fullPage: true });
   });
 
   test("quick-export — full page screenshot (no upload)", async ({ page }) => {
-    await page.goto(`${BASE}/app/quick-export`);
-    await page.evaluate(() => localStorage.removeItem("snaptosize_onboarding_dismissed"));
     await page.goto(`${BASE}/app/quick-export`);
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: "test-results/r3-quickexport-default.png", fullPage: true });

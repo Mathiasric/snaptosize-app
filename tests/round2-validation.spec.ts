@@ -5,14 +5,6 @@ const BASE = "http://localhost:3456";
 // ─── Onboarding Banner ───────────────────────────────────────────────
 
 test.describe("OnboardingBanner", () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage so banner always shows
-    await page.goto(`${BASE}/app/packs`);
-    await page.evaluate(() =>
-      localStorage.removeItem("snaptosize_onboarding_dismissed")
-    );
-  });
-
   test("shows on packs page with correct steps", async ({ page }) => {
     await page.goto(`${BASE}/app/packs`);
     const banner = page.locator("text=Get print-ready files in seconds");
@@ -26,10 +18,6 @@ test.describe("OnboardingBanner", () => {
 
   test("shows on quick-export page with correct steps", async ({ page }) => {
     await page.goto(`${BASE}/app/quick-export`);
-    await page.evaluate(() =>
-      localStorage.removeItem("snaptosize_onboarding_dismissed")
-    );
-    await page.goto(`${BASE}/app/quick-export`);
 
     const banner = page.locator("text=Get print-ready files in seconds");
     await expect(banner).toBeVisible();
@@ -40,27 +28,15 @@ test.describe("OnboardingBanner", () => {
     await expect(page.locator("text=Download print-ready JPG")).toBeVisible();
   });
 
-  test("dismiss button hides banner and persists across refresh", async ({
-    page,
-  }) => {
+  test("banner persists across page refresh", async ({ page }) => {
     await page.goto(`${BASE}/app/packs`);
     const banner = page.locator("text=Get print-ready files in seconds");
     await expect(banner).toBeVisible();
 
-    // Click dismiss
-    await page.locator('button[aria-label="Dismiss"]').first().click();
-    await expect(banner).not.toBeVisible();
-
-    // Verify localStorage was set
-    const stored = await page.evaluate(() =>
-      localStorage.getItem("snaptosize_onboarding_dismissed")
-    );
-    expect(stored).toBe("1");
-
-    // Refresh — banner should stay hidden
+    // Refresh — banner should still be visible
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await expect(banner).not.toBeVisible();
+    await expect(banner).toBeVisible();
   });
 });
 
@@ -216,11 +192,6 @@ test.describe("Mobile responsiveness (375px)", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test("packs page renders correctly on mobile", async ({ page }) => {
-    // Navigate first, then clear localStorage
-    await page.goto(`${BASE}/app/packs`);
-    await page.evaluate(() =>
-      localStorage.removeItem("snaptosize_onboarding_dismissed")
-    );
     await page.goto(`${BASE}/app/packs`);
 
     // Banner visible
@@ -234,10 +205,6 @@ test.describe("Mobile responsiveness (375px)", () => {
   });
 
   test("quick-export page renders correctly on mobile", async ({ page }) => {
-    await page.goto(`${BASE}/app/quick-export`);
-    await page.evaluate(() =>
-      localStorage.removeItem("snaptosize_onboarding_dismissed")
-    );
     await page.goto(`${BASE}/app/quick-export`);
 
     const banner = page.locator("text=Get print-ready files in seconds");
