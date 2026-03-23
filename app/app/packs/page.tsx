@@ -8,7 +8,7 @@ import type { Group } from "../components/PackSelector";
 import { JobCard } from "../components/JobCard";
 import type { Job, JobStatus } from "../components/JobCard";
 import { GenerateButton } from "../components/GenerateButton";
-import { XCircle, FolderDown, Check, Download, Clock as ClockIcon } from "lucide-react";
+import { XCircle, FolderDown, Check, Download } from "lucide-react";
 import { useQuota } from "../context/QuotaContext";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
