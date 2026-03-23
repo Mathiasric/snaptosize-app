@@ -400,6 +400,7 @@ export default function AppPage() {
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
             disabled={busy}
+            isPro={isPro}
           />
 
           <PackSelector

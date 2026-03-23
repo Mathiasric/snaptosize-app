@@ -39,7 +39,7 @@ test.describe("Integrated empty state — onboarding", () => {
     await page.goto(`${BASE}/app/quick-export`);
 
     await expect(page.locator("text=Get print-ready files in seconds")).toBeVisible();
-    await expect(page.locator("text=Choose size and orientation")).toBeVisible();
+    await expect(page.locator("text=Pick size & orientation")).toBeVisible();
     await expect(page.locator("text=Your export will appear here")).not.toBeVisible();
   });
 

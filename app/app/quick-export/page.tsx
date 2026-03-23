@@ -421,6 +421,7 @@ export default function QuickExportPage() {
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
             disabled={busy}
+            isPro={isPro}
           />
 
           {/* Orientation toggle */}
@@ -786,8 +787,8 @@ function QuickExportEmptyState() {
 
   const steps = [
     { icon: Upload, text: "Upload your artwork" },
-    { icon: Layers, text: "Choose size and orientation" },
-    { icon: Download, text: "Download a print-ready JPG" },
+    { icon: Layers, text: "Pick size & orientation" },
+    { icon: Download, text: "Download print-ready JPG" },
   ];
 
   return (
@@ -812,11 +813,11 @@ function QuickExportEmptyState() {
               : "Your export will appear here"}
           </h3>
           {showGuide ? (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
               {steps.map((step, i) => (
-                <div key={i} className="flex items-center gap-1.5">
+                <div key={i} className="flex items-center gap-1">
                   {i > 0 && (
-                    <span className="mr-1 text-xs text-foreground/20">&rarr;</span>
+                    <span className="mr-0.5 text-xs text-foreground/20">&rarr;</span>
                   )}
                   <div className="rounded-md bg-accent/15 p-1">
                     <step.icon size={12} className="text-accent-light" />

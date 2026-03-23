@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Download, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Clock, Loader, Lock } from "lucide-react";
 import type { Group } from "./PackSelector";
 import { PACKS } from "./PackSelector";
@@ -70,6 +70,18 @@ const STATUS_CONFIG: Record<
 
 export function JobCard({ group, job, onRetry }: JobCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const prevStatus = useRef(job.status);
+  const [justDone, setJustDone] = useState(false);
+
+  useEffect(() => {
+    if (prevStatus.current !== "done" && job.status === "done") {
+      setJustDone(true);
+      const t = setTimeout(() => setJustDone(false), 500);
+      return () => clearTimeout(t);
+    }
+    prevStatus.current = job.status;
+  }, [job.status]);
+
   const pack = PACKS.find((p) => p.key === group);
   const config = STATUS_CONFIG[job.status];
   const showDebug =
@@ -80,7 +92,7 @@ export function JobCard({ group, job, onRetry }: JobCardProps) {
 
   return (
     <div
-      className={`rounded-xl border p-4 transition-colors ${
+      className={`animate-slide-in-up rounded-xl border p-4 transition-colors ${justDone ? "animate-success-pop" : ""} ${
         job.status === "done"
           ? "border-success/20 bg-surface"
           : job.status === "error"

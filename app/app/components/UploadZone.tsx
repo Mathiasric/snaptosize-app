@@ -7,9 +7,10 @@ interface UploadZoneProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
   disabled: boolean;
+  isPro?: boolean;
 }
 
-export function UploadZone({ file, onFileChange, disabled }: UploadZoneProps) {
+export function UploadZone({ file, onFileChange, disabled, isPro = false }: UploadZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -103,6 +104,15 @@ export function UploadZone({ file, onFileChange, disabled }: UploadZoneProps) {
               </span>
               <span className="text-foreground/30">{formatSize(file.size)}</span>
             </div>
+            {!isPro && (
+              <a
+                href="/app/billing?source=watermark-preview"
+                className="flex items-center gap-1 text-[10px] font-medium text-foreground/40 transition-colors hover:text-accent-light"
+              >
+                <span className="text-foreground/25">Free: includes watermark</span>
+                <span className="text-accent-light">&middot; Remove</span>
+              </a>
+            )}
             {!disabled && (
               <button
                 onClick={handleRemove}

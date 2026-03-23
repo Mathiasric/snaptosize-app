@@ -36,8 +36,8 @@ test.describe("OnboardingBanner", () => {
 
     // Verify quick-export-specific steps
     await expect(page.locator("text=Upload your artwork")).toBeVisible();
-    await expect(page.locator("text=Choose size and orientation")).toBeVisible();
-    await expect(page.locator("text=Download a print-ready JPG")).toBeVisible();
+    await expect(page.locator("text=Pick size & orientation")).toBeVisible();
+    await expect(page.locator("text=Download print-ready JPG")).toBeVisible();
   });
 
   test("dismiss button hides banner and persists across refresh", async ({
