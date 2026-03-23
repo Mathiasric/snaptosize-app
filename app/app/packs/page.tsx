@@ -276,13 +276,8 @@ export default function AppPage() {
       }
       dispatch({ type: "set_image_key", imageKey });
 
-      // Free/guest users: only enqueue first pack, lock the rest
-      const toEnqueue = isPro ? selectedGroups : selectedGroups.slice(0, 1);
-      if (!isPro && selectedGroups.length > 1) {
-        for (const g of selectedGroups.slice(1)) {
-          dispatch({ type: "set_job", job: { group: g, status: "locked" as JobStatus } });
-        }
-      }
+      // Enqueue all selected packs sequentially; Worker enforces daily quota
+      const toEnqueue = selectedGroups;
 
       // Sequential: enqueue one pack → poll until done/error → next pack
       dispatch({ type: "set_phase", phase: "polling" });
@@ -304,15 +299,22 @@ export default function AppPage() {
           const body = await safeText(enqRes);
 
           if (enqRes.status === 402) {
+            // Lock this pack and all remaining unprocessed packs
             dispatch({
               type: "set_job",
-              job: { group, status: "error", error: "Free limit reached" },
+              job: { group, status: "locked" as JobStatus },
             });
+            for (const g of toEnqueue.slice(i + 1)) {
+              dispatch({
+                type: "set_job",
+                job: { group: g, status: "locked" as JobStatus },
+              });
+            }
             dispatch({
               type: "set_global_error",
               error: "QUOTA:FREE_BATCH_LIMIT",
             });
-            return;
+            break;
           }
 
           if (enqRes.status === 429) {
