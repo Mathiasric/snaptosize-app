@@ -4,6 +4,25 @@ import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
+import { useQuota } from "../app/context/QuotaContext";
+
+function QuotaBadge() {
+  const { remaining } = useQuota();
+  const { user, isLoaded } = useUser();
+  const plan = (user?.publicMetadata as { plan?: string } | undefined)?.plan;
+
+  // Only show for signed-in free users who have quota data
+  if (!isLoaded || plan === "pro" || !remaining) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-foreground/40">
+      <span>{remaining.batch} packs</span>
+      <span className="text-foreground/15">|</span>
+      <span>{remaining.quick} exports</span>
+      <span className="text-foreground/25">left today</span>
+    </div>
+  );
+}
 
 function PlanIndicator() {
   const { user, isLoaded } = useUser();
@@ -75,6 +94,7 @@ export function Header() {
         </SignedOut>
 
         <SignedIn>
+          <QuotaBadge />
           <PlanIndicator />
           <Link
             href="/app/billing"
