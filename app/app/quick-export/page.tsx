@@ -495,6 +495,13 @@ export default function QuickExportPage() {
             </select>
           </div>
 
+          <a
+            href="mailto:support@snaptosize.com?subject=Size%20request&body=Hi%2C%20I%27d%20love%20to%20see%20this%20size%20added%3A%20"
+            className="block text-center text-[11px] text-foreground/30 transition-colors hover:text-accent-light"
+          >
+            Missing a size? Let us know
+          </a>
+
           {/* Export button */}
           <div className="space-y-2">
             <GenerateButton
