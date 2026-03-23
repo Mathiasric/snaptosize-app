@@ -31,8 +31,6 @@ import {
 } from "../lib/size-catalog";
 import type { CatalogGroup, Orientation } from "../lib/size-catalog";
 import { useQuota } from "../context/QuotaContext";
-import { ImageQualityWarning } from "../components/ImageQualityWarning";
-import { useImageDimensions } from "../hooks/useImageDimensions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -188,8 +186,6 @@ export default function QuickExportPage() {
   const { setRemaining: setSharedRemaining } = useQuota();
   const { user } = useUser();
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
-  const imageDims = useImageDimensions(state.file);
-
   const isSquare = state.orientation === "Square";
   const effectiveGroup = isSquare ? "SQUARE" : state.group;
   const sizes = useMemo(() => getSizesForGroup(effectiveGroup), [effectiveGroup]);
@@ -532,15 +528,6 @@ export default function QuickExportPage() {
                   Instant download
                 </span>
               </p>
-            )}
-
-            {imageDims && selectedSize && (
-              <ImageQualityWarning
-                imageWidth={imageDims.width}
-                imageHeight={imageDims.height}
-                requiredWidth={selectedSize.widthPx}
-                requiredHeight={selectedSize.heightPx}
-              />
             )}
 
             {state.globalError === "QUOTA:FREE_QUICK_LIMIT" ? (

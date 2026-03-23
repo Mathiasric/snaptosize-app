@@ -145,24 +145,6 @@ test.describe("Billing page content verification (source-level)", () => {
   });
 });
 
-// ─── Image Quality Warning ───────────────────────────────────────────
-
-test.describe("ImageQualityWarning", () => {
-  test("does NOT show warning before image upload on packs page", async ({
-    page,
-  }) => {
-    await page.goto(`${BASE}/app/packs`);
-    await expect(page.locator("text=Low resolution")).not.toBeVisible();
-  });
-
-  test("does NOT show warning before image upload on quick-export page", async ({
-    page,
-  }) => {
-    await page.goto(`${BASE}/app/quick-export`);
-    await expect(page.locator("text=Low resolution")).not.toBeVisible();
-  });
-});
-
 // ─── Page Structure Checks ───────────────────────────────────────────
 
 test.describe("Page structure", () => {
