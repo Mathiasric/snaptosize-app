@@ -92,6 +92,7 @@ export const SIZE_CATALOG: GroupDef[] = [
       { id: "8.5x11", widthPx: inToPx(8.5), heightPx: inToPx(11), label: `8.5x11 in (${inToPx(8.5)}\u00d7${inToPx(11)})` },
       inchSize(11, 14),
       inchSize(11, 17),
+      inchSize(13, 19),
       inchSize(20, 24),
     ],
   },
@@ -103,6 +104,7 @@ function squareSize(side: number): SizeEntry {
 }
 
 export const SQUARE_SIZES: SizeEntry[] = [
+  squareSize(5),
   squareSize(8),
   squareSize(10),
   squareSize(12),

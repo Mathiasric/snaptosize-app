@@ -15,7 +15,7 @@ export const PACKS: PackConfig[] = [
   { key: "3x4", label: "3\u00d74 Ratio", sizes: ["6x8", "9x12", "12x16", "15x20", "18x24", "24x32"] },
   { key: "4x5", label: "4\u00d75 Ratio", sizes: ["8x10", "12x15", "16x20", "20x25", "24x30"] },
   { key: "iso", label: "ISO A-Series", sizes: ["A5", "A4", "A3", "A2", "A1", "A0"] },
-  { key: "extras", label: "Common Sizes", sizes: ["5x7", "8.5x11", "11x14", "11x17", "20x24"] },
+  { key: "extras", label: "Common Sizes", sizes: ["5x7", "8.5x11", "11x14", "11x17", "13x19", "20x24"] },
 ];
 
 export const ALL_KEYS = PACKS.map((p) => p.key);
