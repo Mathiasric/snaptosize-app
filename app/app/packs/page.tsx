@@ -12,6 +12,10 @@ import { XCircle, FolderDown, Check, Download, Clock as ClockIcon } from "lucide
 import { useQuota } from "../context/QuotaContext";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
+import { OnboardingBanner } from "../components/OnboardingBanner";
+import { ImageQualityWarning } from "../components/ImageQualityWarning";
+import { useImageDimensions } from "../hooks/useImageDimensions";
+import { getSizesForGroup } from "../lib/size-catalog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,6 +160,22 @@ export default function AppPage() {
     () => ALL_KEYS.filter((g) => state.selected[g]),
     [state.selected],
   );
+
+  const imageDims = useImageDimensions(state.file);
+
+  // Find the largest required dimensions across all selected packs
+  const maxRequired = useMemo(() => {
+    let maxW = 0;
+    let maxH = 0;
+    for (const g of selectedGroups) {
+      const sizes = getSizesForGroup(g);
+      for (const s of sizes) {
+        if (s.widthPx > maxW) maxW = s.widthPx;
+        if (s.heightPx > maxH) maxH = s.heightPx;
+      }
+    }
+    return { width: maxW, height: maxH };
+  }, [selectedGroups]);
 
   const busy =
     state.phase === "uploading" ||
@@ -395,6 +415,7 @@ export default function AppPage() {
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
         <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+          <OnboardingBanner mode="packs" />
           <UploadZone
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
@@ -433,6 +454,15 @@ export default function AppPage() {
                 <span className="flex items-center gap-1"><Check size={10} className="text-accent/60" />Print-ready</span>
                 <span className="flex items-center gap-1"><Check size={10} className="text-accent/60" />Instant ZIP</span>
               </p>
+            )}
+
+            {imageDims && selectedGroups.length > 0 && maxRequired.width > 0 && (
+              <ImageQualityWarning
+                imageWidth={imageDims.width}
+                imageHeight={imageDims.height}
+                requiredWidth={maxRequired.width}
+                requiredHeight={maxRequired.height}
+              />
             )}
 
             {/* Inline error under generate */}
