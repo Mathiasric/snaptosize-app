@@ -437,6 +437,13 @@ export default function AppPage() {
             disabled={busy}
           />
 
+          <p className="text-xs text-foreground/35">
+            Need A0, 24×36, or 24×32?{" "}
+            <a href="/quick-export" className="text-accent-light hover:underline">
+              Export them individually
+            </a>
+          </p>
+
           <SizeRequestLink page="packs" />
 
           <div className="space-y-2">
