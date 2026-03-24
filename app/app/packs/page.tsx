@@ -186,6 +186,8 @@ export default function AppPage() {
   ): Promise<"done" | "error"> {
     const start = Date.now();
     const timeoutMs = 3 * 60 * 1000;
+    let consecutiveFailures = 0;
+    const maxConsecutiveFailures = 10;
 
     while (!signal.aborted) {
       if (Date.now() - start > timeoutMs) {
@@ -196,50 +198,72 @@ export default function AppPage() {
         return "error";
       }
 
-      const res = await fetch(
-        `/api/status?job_id=${encodeURIComponent(jobId)}`,
-        { signal },
-      );
+      try {
+        const res = await fetch(
+          `/api/status?job_id=${encodeURIComponent(jobId)}`,
+          { signal },
+        );
 
-      if (res.ok) {
-        const data = await res.json();
+        if (res.ok) {
+          consecutiveFailures = 0;
+          const data = await res.json();
 
-        if (isDone(data)) {
+          if (isDone(data)) {
+            dispatch({
+              type: "set_job",
+              job: { group, jobId, status: "done" },
+            });
+            const pack = PACKS.find((p) => p.key === group);
+            dispatch({
+              type: "add_recent_download",
+              download: {
+                label: pack?.label ?? group,
+                completedAt: Date.now(),
+                downloadUrl: `/api/download?job_id=${encodeURIComponent(jobId)}`,
+                jobId,
+              },
+            });
+            return "done";
+          } else if (isError(data)) {
+            dispatch({
+              type: "set_job",
+              job: {
+                group,
+                jobId,
+                status: "error",
+                error: (data.error as string) || "Processing failed",
+              },
+            });
+            return "error";
+          } else {
+            const s: JobStatus =
+              data.status === "queued" || data.state === "queued"
+                ? "queued"
+                : "running";
+            dispatch({
+              type: "set_job",
+              job: { group, jobId, status: s },
+            });
+          }
+        } else {
+          consecutiveFailures++;
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            dispatch({
+              type: "set_job",
+              job: { group, jobId, status: "error", error: `Server error (HTTP ${res.status})` },
+            });
+            return "error";
+          }
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") throw err;
+        consecutiveFailures++;
+        if (consecutiveFailures >= maxConsecutiveFailures) {
           dispatch({
             type: "set_job",
-            job: { group, jobId, status: "done" },
-          });
-          const pack = PACKS.find((p) => p.key === group);
-          dispatch({
-            type: "add_recent_download",
-            download: {
-              label: pack?.label ?? group,
-              completedAt: Date.now(),
-              downloadUrl: `/api/download?job_id=${encodeURIComponent(jobId)}`,
-              jobId,
-            },
-          });
-          return "done";
-        } else if (isError(data)) {
-          dispatch({
-            type: "set_job",
-            job: {
-              group,
-              jobId,
-              status: "error",
-              error: (data.error as string) || "Processing failed",
-            },
+            job: { group, jobId, status: "error", error: "Lost connection to server" },
           });
           return "error";
-        } else {
-          const s: JobStatus =
-            data.status === "queued" || data.state === "queued"
-              ? "queued"
-              : "running";
-          dispatch({
-            type: "set_job",
-            job: { group, jobId, status: s },
-          });
         }
       }
 

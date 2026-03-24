@@ -209,6 +209,8 @@ export default function QuickExportPage() {
   async function pollJob(jobId: string, sizeLabel: string, signal: AbortSignal) {
     const start = Date.now();
     const timeoutMs = 3 * 60 * 1000;
+    let consecutiveFailures = 0;
+    const maxConsecutiveFailures = 10;
 
     while (!signal.aborted) {
       if (Date.now() - start > timeoutMs) {
@@ -220,59 +222,82 @@ export default function QuickExportPage() {
         return;
       }
 
-      const res = await fetch(
-        `/api/status?job_id=${encodeURIComponent(jobId)}`,
-        { signal },
-      );
+      try {
+        const res = await fetch(
+          `/api/status?job_id=${encodeURIComponent(jobId)}`,
+          { signal },
+        );
 
-      if (!res.ok) {
-        await new Promise((r) => setTimeout(r, 1000));
-        continue;
+        if (!res.ok) {
+          consecutiveFailures++;
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            dispatch({
+              type: "set_job",
+              job: { jobId, status: "error", error: `Server error (HTTP ${res.status})`, sizeLabel },
+            });
+            dispatch({ type: "set_phase", phase: "done" });
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
+        }
+
+        consecutiveFailures = 0;
+        const data = await res.json();
+
+        if (isDone(data)) {
+          const downloadUrl =
+            (data.download_url as string) ||
+            `/api/download?job_id=${encodeURIComponent(jobId)}`;
+          dispatch({
+            type: "set_job",
+            job: { jobId, status: "done", downloadUrl, sizeLabel },
+          });
+          // Add to recent downloads
+          dispatch({
+            type: "add_recent_download",
+            download: {
+              label: sizeLabel,
+              completedAt: Date.now(),
+              downloadUrl,
+              jobId,
+            },
+          });
+          dispatch({ type: "set_phase", phase: "done" });
+          return;
+        }
+
+        if (isError(data)) {
+          dispatch({
+            type: "set_job",
+            job: {
+              jobId,
+              status: "error",
+              error: (data.error as string) || "Processing failed",
+              sizeLabel,
+            },
+          });
+          dispatch({ type: "set_phase", phase: "done" });
+          return;
+        }
+
+        const s: JobStatus =
+          data.status === "queued" || data.state === "queued"
+            ? "queued"
+            : "running";
+        dispatch({ type: "set_job", job: { jobId, status: s, sizeLabel } });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        consecutiveFailures++;
+        if (consecutiveFailures >= maxConsecutiveFailures) {
+          dispatch({
+            type: "set_job",
+            job: { jobId, status: "error", error: "Lost connection to server", sizeLabel },
+          });
+          dispatch({ type: "set_phase", phase: "done" });
+          return;
+        }
       }
-
-      const data = await res.json();
-
-      if (isDone(data)) {
-        const downloadUrl =
-          (data.download_url as string) ||
-          `/api/download?job_id=${encodeURIComponent(jobId)}`;
-        dispatch({
-          type: "set_job",
-          job: { jobId, status: "done", downloadUrl, sizeLabel },
-        });
-        // Add to recent downloads
-        dispatch({
-          type: "add_recent_download",
-          download: {
-            label: sizeLabel,
-            completedAt: Date.now(),
-            downloadUrl,
-            jobId,
-          },
-        });
-        dispatch({ type: "set_phase", phase: "done" });
-        return;
-      }
-
-      if (isError(data)) {
-        dispatch({
-          type: "set_job",
-          job: {
-            jobId,
-            status: "error",
-            error: (data.error as string) || "Processing failed",
-            sizeLabel,
-          },
-        });
-        dispatch({ type: "set_phase", phase: "done" });
-        return;
-      }
-
-      const s: JobStatus =
-        data.status === "queued" || data.state === "queued"
-          ? "queued"
-          : "running";
-      dispatch({ type: "set_job", job: { jobId, status: s, sizeLabel } });
 
       await new Promise((r) => setTimeout(r, 1000));
     }
