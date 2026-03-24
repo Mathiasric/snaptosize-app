@@ -439,7 +439,7 @@ export default function AppPage() {
 
           <p className="text-xs text-foreground/35">
             Need A0, 24×36, or 24×32?{" "}
-            <a href="/quick-export" className="text-accent-light hover:underline">
+            <a href="/app/quick-export" className="text-accent-light hover:underline">
               Export them individually
             </a>
           </p>
