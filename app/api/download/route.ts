@@ -29,6 +29,18 @@ export async function GET(req: Request) {
     const workerRequestId = r.headers.get("x-request-id") || requestId;
     console.log(JSON.stringify({ layer: "next", event: "worker_call", request_id: workerRequestId, endpoint: "/api/download", worker_path: `/download/${jobId}`, status: r.status, ms, user_id: userId || undefined, job_id: jobId }));
 
+    if (!r.ok) {
+      const errorCode =
+        r.status === 404 ? "not_found"
+        : r.status === 410 ? "expired"
+        : r.status === 402 ? "quota"
+        : "download_failed";
+      const returnTo = searchParams.get("return_to");
+      const redirectPath = returnTo && returnTo.startsWith("/app/") ? returnTo : "/app/packs";
+      const origin = new URL(req.url).origin;
+      return Response.redirect(`${origin}${redirectPath}?download_error=${errorCode}`, 302);
+    }
+
     return new Response(r.body, {
       status: r.status,
       headers: {

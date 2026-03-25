@@ -25,11 +25,13 @@ interface PackSelectorProps {
   onToggle: (group: Group, value: boolean) => void;
   onSelectAll: (value: boolean) => void;
   disabled: boolean;
+  remainingBatch?: number;
 }
 
-export function PackSelector({ selected, onToggle, onSelectAll, disabled }: PackSelectorProps) {
+export function PackSelector({ selected, onToggle, onSelectAll, disabled, remainingBatch }: PackSelectorProps) {
   const allSelected = ALL_KEYS.every((k) => selected[k]);
   const noneSelected = ALL_KEYS.every((k) => !selected[k]);
+  const selectedCount = ALL_KEYS.filter((k) => selected[k]).length;
 
   return (
     <div>
@@ -55,6 +57,18 @@ export function PackSelector({ selected, onToggle, onSelectAll, disabled }: Pack
           </button>
         </div>
       </div>
+
+      {remainingBatch !== undefined && remainingBatch <= 5 && (
+        <p className="mb-2 text-xs text-foreground/50">
+          {remainingBatch} {remainingBatch === 1 ? "pack" : "packs"} remaining today
+        </p>
+      )}
+
+      {remainingBatch !== undefined && selectedCount > remainingBatch && (
+        <p className="mb-2 text-xs font-medium text-amber-500">
+          You selected {selectedCount} but only have {remainingBatch} left — extras will be skipped.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {PACKS.map((pack) => {

@@ -195,6 +195,24 @@ export default function QuickExportPage() {
     [sizes, state.sizeId],
   );
 
+  // Handle download_error redirect from /api/download
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const downloadError = params.get("download_error");
+    if (downloadError) {
+      const messages: Record<string, string> = {
+        not_found: "Download not found. The file may have been deleted.",
+        expired: "Download link has expired. Please re-export.",
+        quota: "Download blocked — quota exceeded.",
+        download_failed: "Download failed. Please try again.",
+      };
+      dispatch({ type: "set_global_error", error: messages[downloadError] || messages.download_failed });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("download_error");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, []);
+
   const busy =
     state.phase === "uploading" ||
     state.phase === "enqueuing" ||
@@ -216,7 +234,7 @@ export default function QuickExportPage() {
       if (Date.now() - start > timeoutMs) {
         dispatch({
           type: "set_job",
-          job: { jobId, status: "error", error: "Taking longer than expected — try again", sizeLabel },
+          job: { jobId, status: "error", error: "Taking longer than expected. Retry is safe — duplicates are automatically prevented.", sizeLabel },
         });
         dispatch({ type: "set_phase", phase: "done" });
         return;
@@ -248,7 +266,7 @@ export default function QuickExportPage() {
         if (isDone(data)) {
           const downloadUrl =
             (data.download_url as string) ||
-            `/api/download?job_id=${encodeURIComponent(jobId)}`;
+            `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent("/app/quick-export")}`;
           dispatch({
             type: "set_job",
             job: { jobId, status: "done", downloadUrl, sizeLabel },
@@ -744,7 +762,7 @@ function QuickJobCard({
             Your export is ready.
           </p>
           <a
-            href={job.downloadUrl ?? `/api/download?job_id=${encodeURIComponent(job.jobId)}`}
+            href={job.downloadUrl ?? `/api/download?job_id=${encodeURIComponent(job.jobId)}&return_to=${encodeURIComponent("/app/quick-export")}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-success/15 px-4 py-2 text-sm font-semibold text-success transition-colors hover:bg-success/25"

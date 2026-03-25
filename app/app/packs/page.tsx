@@ -158,6 +158,23 @@ export default function AppPage() {
     [state.selected],
   );
 
+  // Handle download_error redirect from /api/download
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const downloadError = params.get("download_error");
+    if (downloadError) {
+      const messages: Record<string, string> = {
+        not_found: "Download not found. The file may have been deleted.",
+        expired: "Download link has expired. Please re-export.",
+        quota: "Download blocked — quota exceeded.",
+        download_failed: "Download failed. Please try again.",
+      };
+      dispatch({ type: "set_global_error", error: messages[downloadError] || messages.download_failed });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("download_error");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, []);
 
   const busy =
     state.phase === "uploading" ||
@@ -193,7 +210,7 @@ export default function AppPage() {
       if (Date.now() - start > timeoutMs) {
         dispatch({
           type: "set_job",
-          job: { group, jobId, status: "error", error: "Taking longer than expected — try again" },
+          job: { group, jobId, status: "error", error: "Taking longer than expected. Retry is safe — duplicates are automatically prevented." },
         });
         return "error";
       }
@@ -435,6 +452,7 @@ export default function AppPage() {
             }
             onSelectAll={(value) => dispatch({ type: "select_all", value })}
             disabled={busy}
+            remainingBatch={state.remaining?.batch}
           />
 
           <p className="text-xs text-foreground/35">
