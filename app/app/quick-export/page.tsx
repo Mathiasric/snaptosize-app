@@ -208,7 +208,7 @@ export default function QuickExportPage() {
   // ---- Poll single job ----
   async function pollJob(jobId: string, sizeLabel: string, signal: AbortSignal) {
     const start = Date.now();
-    const timeoutMs = 3 * 60 * 1000;
+    const timeoutMs = 5 * 60 * 1000;
     let consecutiveFailures = 0;
     const maxConsecutiveFailures = 10;
 
@@ -216,7 +216,7 @@ export default function QuickExportPage() {
       if (Date.now() - start > timeoutMs) {
         dispatch({
           type: "set_job",
-          job: { jobId, status: "error", error: "Timed out after 3 minutes", sizeLabel },
+          job: { jobId, status: "error", error: "Timed out after 5 minutes", sizeLabel },
         });
         dispatch({ type: "set_phase", phase: "done" });
         return;

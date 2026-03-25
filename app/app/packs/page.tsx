@@ -185,7 +185,7 @@ export default function AppPage() {
     signal: AbortSignal,
   ): Promise<"done" | "error"> {
     const start = Date.now();
-    const timeoutMs = 3 * 60 * 1000;
+    const timeoutMs = 5 * 60 * 1000;
     let consecutiveFailures = 0;
     const maxConsecutiveFailures = 10;
 
