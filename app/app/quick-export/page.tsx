@@ -216,7 +216,7 @@ export default function QuickExportPage() {
       if (Date.now() - start > timeoutMs) {
         dispatch({
           type: "set_job",
-          job: { jobId, status: "error", error: "Timed out after 5 minutes", sizeLabel },
+          job: { jobId, status: "error", error: "Taking longer than expected — try again", sizeLabel },
         });
         dispatch({ type: "set_phase", phase: "done" });
         return;

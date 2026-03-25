@@ -193,7 +193,7 @@ export default function AppPage() {
       if (Date.now() - start > timeoutMs) {
         dispatch({
           type: "set_job",
-          job: { group, jobId, status: "error", error: "Timed out" },
+          job: { group, jobId, status: "error", error: "Taking longer than expected — try again" },
         });
         return "error";
       }
