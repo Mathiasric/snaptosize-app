@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## SnapToSize — Technical System State
 
-Last updated: 2026-03-23
+Last updated: 2026-03-25
 
 > This file is the authoritative source for infrastructure, backend, API contracts, billing implementation, and monitoring.
 > For business strategy, ICP, funnel, and growth execution, see GROWTH_STATE.md.
@@ -188,7 +188,7 @@ Success responses (free users only):
 - `remaining: { quick: N, batch: N }` — shows remaining exports for the day
 
 Frontend displays remaining count when critical:
-- Packs: badge when `remaining.batch <= 1`
+- Packs: badge when `remaining.batch <= 5`, over-selection warning when selected packs > remaining
 - Singles: badge when `remaining.quick <= 2`
 
 KV key: `quota:{userId}:{YYYY-MM-DD}` — TTL: 36h
@@ -275,7 +275,8 @@ Implementation:
 - Packs: working
 - Quick Export: working
   - Landscape orientation labels swap correctly (e.g., "8x10" → "10x8")
-  - Remaining exports badge (batch ≤ 1 or quick ≤ 2)
+  - Remaining exports badge (batch ≤ 5 with over-selection warning, quick ≤ 2)
+- Download error redirects: `/api/download` redirects back to originating page with `?download_error={code}` on Worker errors (open-redirect protected via `/app/` prefix validation)
 - Billing page: working (redesigned with Free vs Pro comparison table, social proof)
 - 402 paywall UX: implemented
 - Pro badge: visible

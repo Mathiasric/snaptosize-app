@@ -3,7 +3,7 @@
 > **Repo:** snaptosize-app
 > **URL:** https://app.snaptosize.com
 > **Stack:** Next.js 16.1.6 · React 19 · Tailwind CSS v4 · Cloudflare Pages
-> **Last updated:** 2026-03-23
+> **Last updated:** 2026-03-25
 
 ---
 
@@ -285,11 +285,15 @@ Polls job status.
 
 #### GET /api/download
 
-Downloads completed job result.
+Downloads completed job result. On Worker error, redirects back to originating page with error context.
 
-- **Query:** `?job_id=...`
-- **Response:** Binary (ZIP or JPG) with Content-Disposition
+- **Query:** `?job_id=...&return_to=/app/quick-export` (optional)
+- **Response (success):** Binary (ZIP or JPG) with Content-Disposition
+- **Response (Worker error):** 302 redirect to `{return_to}?download_error={code}`
 - **Auth:** Optional
+- **`return_to` param:** Must start with `/app/` (open-redirect protection). Defaults to `/app/packs`.
+- **Error codes:** `not_found` (404), `expired` (410), `quota` (402), `download_failed` (other)
+- **Receiving pages** (packs + quick-export) read `download_error` from URL, display contextual error message, then clean the param from the URL via `history.replaceState`
 
 ### Stripe Routes
 
@@ -375,6 +379,8 @@ Generate multiple print-size ZIP packs from one image.
    - Then enqueue next pack
 3. Show results with download buttons
 
+**Download error handling:** If redirected back from `/api/download` with `?download_error=...`, shows contextual error message (expired, not found, quota, generic) and cleans the param from the URL.
+
 **Free vs Pro:**
 - Free: 1 pack processes, rest shown as "locked" with upgrade CTA
 - Pro: All selected packs process sequentially
@@ -399,6 +405,10 @@ Export one print-ready JPG at a specific size and orientation.
 2. Select ratio group (hidden for Square)
 3. Select size from dropdown
 4. Upload → Enqueue with `mode: "single"` → Poll → Download
+
+**Download URLs** include `&return_to=/app/quick-export` so download errors redirect back here instead of defaulting to `/app/packs`.
+
+**Download error handling:** Same as packs page — reads `?download_error=...`, shows contextual error, cleans URL.
 
 **Size Catalog:** `app/app/lib/size-catalog.ts` — all sizes at 300 DPI with pixel dimensions. Includes square sizes (5x5, 8x8, 10x10, 12x12, 16x16, 20x20).
 
@@ -445,7 +455,9 @@ User hits limit → /app/billing?source=limit&kind=FREE_BATCH_LIMIT
 - "Select all" / "Deselect all" buttons
 - Selected state with purple glow + checkmark
 - Size list preview per pack
-- Props: `{ selected, onToggle, onSelectAll, disabled }`
+- Remaining batch warning: shows "N packs remaining today" when `remainingBatch <= 5`
+- Over-selection warning: "You selected X but only have Y left — extras will be skipped" when `selectedCount > remainingBatch`
+- Props: `{ selected, onToggle, onSelectAll, disabled, remainingBatch? }`
 
 ### JobCard (`app/app/components/JobCard.tsx`)
 
