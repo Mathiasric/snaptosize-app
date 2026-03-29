@@ -42,6 +42,7 @@ export async function POST(req: Request) {
       metadata: { userId, ...(source ? { source } : {}), ...(kind ? { kind } : {}) },
       subscription_data: { metadata: { userId } },
       ...(email ? { customer_email: email } : {}),
+      ...(interval !== "yearly" ? { allow_promotion_codes: true } : {}),
     });
 
     await posthogCapture(`clerk:${userId}`, "checkout_started", {
