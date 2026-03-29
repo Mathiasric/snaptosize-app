@@ -338,7 +338,7 @@ export default function AppPage() {
         const enqRes = await fetch("/api/enqueue", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image_key: imageKey, group, artwork_name: state.file.name }),
+          body: JSON.stringify({ image_key: imageKey, group }),
           signal: ac.signal,
         });
 

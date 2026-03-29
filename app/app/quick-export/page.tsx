@@ -375,7 +375,6 @@ export default function QuickExportPage() {
           mode: "single",
           orientation: state.orientation,
           size: selectedSize.id,
-          artwork_name: state.file.name,
         }),
         signal: ac.signal,
       });
