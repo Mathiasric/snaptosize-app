@@ -265,7 +265,6 @@ export default function QuickExportPage() {
 
         if (isDone(data)) {
           const downloadUrl =
-            (data.download_url as string) ||
             `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent("/app/quick-export")}`;
           dispatch({
             type: "set_job",
