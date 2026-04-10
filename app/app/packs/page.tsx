@@ -452,7 +452,8 @@ export default function AppPage() {
     <div className="min-h-screen px-4 pb-16 pt-8">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
-        <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+        <div className="flex flex-col rounded-2xl border border-border bg-surface p-5 lg:max-h-[calc(100vh-9rem)]">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
           <UploadZone
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
@@ -478,8 +479,9 @@ export default function AppPage() {
           </p>
 
           <SizeRequestLink page="packs" />
+          </div>
 
-          <div className="space-y-2">
+          <div className="shrink-0 space-y-2 pt-2">
             <GenerateButton
               disabled={!state.file || noneSelected || busy || state.globalError === "QUOTA:FREE_BATCH_LIMIT"}
               loading={busy}
@@ -507,9 +509,9 @@ export default function AppPage() {
             {/* Inline error under generate */}
             {state.globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
               <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">You&apos;ve reached today&apos;s free limit.</p>
+                <p className="text-sm font-semibold text-foreground">You&apos;ve hit today&apos;s limit.</p>
                 <p className="mt-1 text-xs text-foreground/50">
-                  Unlock unlimited exports, all ZIP packs, and watermark-free downloads.
+                  Your next listing can&apos;t wait until tomorrow.
                 </p>
                 <a
                   href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"

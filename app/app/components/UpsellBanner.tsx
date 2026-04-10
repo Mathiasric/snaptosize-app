@@ -1,7 +1,7 @@
 // app/app/components/UpsellBanner.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -10,20 +10,31 @@ interface UpsellBannerProps {
   mode: "packs" | "quick-export";
 }
 
+const SESSION_KEY = "upsell_banner_dismissed";
+
 export function UpsellBanner({ mode }: UpsellBannerProps) {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(true);
+
+  useEffect(() => {
+    setDismissed(!!sessionStorage.getItem(SESSION_KEY));
+  }, []);
+
+  function dismiss() {
+    sessionStorage.setItem(SESSION_KEY, "1");
+    setDismissed(true);
+  }
 
   if (dismissed) return null;
 
   const message =
     mode === "packs"
-      ? "You just saved hours of manual resizing."
-      : "Your print-ready file is ready in seconds.";
+      ? "That took 30 seconds."
+      : "Your print-ready file is ready.";
 
   return (
     <div className="relative rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
       <button
-        onClick={() => setDismissed(true)}
+        onClick={dismiss}
         className="absolute right-2 top-2 rounded-full p-1 text-foreground/30 transition-colors hover:text-foreground/60"
         aria-label="Dismiss"
       >
@@ -38,7 +49,7 @@ export function UpsellBanner({ mode }: UpsellBannerProps) {
             {message}
           </p>
           <p className="mt-0.5 text-xs text-foreground/50">
-            Go Pro for unlimited exports, no watermarks, and priority processing.
+            Your Etsy listing won&apos;t show the watermark with Pro — download files you can actually sell with.
           </p>
           <Link
             href="/app/billing?source=post_export"

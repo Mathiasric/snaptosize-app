@@ -77,9 +77,9 @@ function BillingContent() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Sell More Prints. Export Without Limits.</h1>
+        <h1 className="text-xl font-bold text-foreground">Stop resizing. Start selling.</h1>
         <p className="mt-1 text-sm text-foreground/40">
-          Go Pro to remove limits and export without watermarks.
+          Upload once, get every size — no watermark, no daily reset panic.
         </p>
       </div>
 
