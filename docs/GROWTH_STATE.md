@@ -525,6 +525,23 @@ See PROJECT_STATE.md §7.5 for technical Worker implementation details.
 - Slide-in animation on mount
 - Success-pop scale animation when job completes
 
+✅ **UpsellBanner: sessionStorage + outcome copy** (2026-04-10)
+- Shows once per session only (was: reset on every export render)
+- Copy shifted from feature-list to consequence framing: "That took 30 seconds. / Files you can actually sell with."
+- Moved toward watermark-removal emphasis per planned A/B direction
+
+✅ **Quota error urgency copy** (2026-04-10)
+- "Your next listing can't wait until tomorrow."
+- Targets highest-intent upgrade moment (limit hit)
+
+✅ **Billing headline + subheadline** (2026-04-10)
+- Headline: "Stop resizing. Start selling."
+- Subheadline: "Upload once, get every size — no watermark, no daily reset panic."
+
+✅ **Generate button always visible at small viewports** (2026-04-10)
+- Left panel uses flex column + internal scroll
+- CTA never clipped on 720px viewport
+
 ---
 
 ## Planned Experiments
