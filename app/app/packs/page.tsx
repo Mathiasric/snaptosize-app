@@ -153,6 +153,20 @@ export default function AppPage() {
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
   const { setRemaining: setSharedRemaining } = useQuota();
 
+  // Register user in nurture email sequence on first visit
+  useEffect(() => {
+    if (!user?.primaryEmailAddress?.emailAddress) return;
+    const email = user.primaryEmailAddress.emailAddress;
+    const flagKey = `app_signup_registered:${user.id}`;
+    if (localStorage.getItem(flagKey)) return;
+    localStorage.setItem(flagKey, "1");
+    fetch("https://worker.snaptosize-mathias.workers.dev/app-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).catch(() => { /* non-critical, ignore errors */ });
+  }, [user?.id]);
+
   const selectedGroups = useMemo(
     () => ALL_KEYS.filter((g) => state.selected[g]),
     [state.selected],
