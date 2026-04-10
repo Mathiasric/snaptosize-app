@@ -153,9 +153,10 @@ export default function AppPage() {
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
   const { setRemaining: setSharedRemaining } = useQuota();
 
-  // Register user in nurture email sequence on first visit
+  // Register free users in nurture email sequence on first visit (skip Pro)
   useEffect(() => {
     if (!user?.primaryEmailAddress?.emailAddress) return;
+    if (isPro) return; // Pro users don't need nurture emails
     const email = user.primaryEmailAddress.emailAddress;
     const flagKey = `app_signup_registered:${user.id}`;
     if (localStorage.getItem(flagKey)) return;
