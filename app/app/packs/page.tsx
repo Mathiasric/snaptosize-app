@@ -572,9 +572,7 @@ export default function AppPage() {
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground/50">
                 Recent Downloads
               </h3>
-              <p className="mb-3 text-xs text-foreground/30">
-                Visible until you refresh this page.
-              </p>
+
               <div className="space-y-2">
                 {previousDownloads.map((item) => (
                   <div
