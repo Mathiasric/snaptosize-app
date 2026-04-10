@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useReducer, useRef } from "react";
+import React, { useState, useEffect, useMemo, useReducer, useRef } from "react";
 import { useUser, SignedOut } from "@clerk/nextjs";
 import { UploadZone } from "../components/UploadZone";
 import { PackSelector, ALL_KEYS, PACKS } from "../components/PackSelector";
@@ -546,7 +546,7 @@ export default function AppPage() {
               return <JobCard key={g} group={g} job={job} />;
             })
           ) : (
-            <EmptyState mode="packs" />
+            <OnboardingHint phase={state.phase} />
           )}
 
           {/* Recent Downloads */}
@@ -605,40 +605,74 @@ export default function AppPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Empty State (with integrated onboarding)
+// Onboarding Hint -- dismissible 3-step guide, hides after first successful export
 // ---------------------------------------------------------------------------
 
-function EmptyState({ mode }: { mode: "packs" | "quick-export" }) {
-  const steps = [
-    { icon: Upload, text: "Upload your artwork" },
-    { icon: Layers, text: "Pick your ratio packs" },
-    { icon: Download, text: "Download Etsy-ready ZIPs" },
+const ONBOARDING_KEY = "onboarding_dismissed";
+
+function OnboardingHint({ phase }: { phase: Phase }) {
+  const [dismissed, setDismissed] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Read localStorage only after mount to avoid SSR/hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+    try {
+      if (localStorage.getItem(ONBOARDING_KEY) === "1") {
+        setDismissed(true);
+      }
+    } catch {
+      // localStorage unavailable (private browsing) -- show hint anyway
+    }
+  }, []);
+
+  // Auto-dismiss after first successful export
+  useEffect(() => {
+    if (phase === "done") {
+      try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch { /* ignore */ }
+      setDismissed(true);
+    }
+  }, [phase]);
+
+  function dismiss() {
+    try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch { /* ignore */ }
+    setDismissed(true);
+  }
+
+  if (!mounted || dismissed) return null;
+
+  const steps: { icon: React.ElementType; text: string }[] = [
+    { icon: Upload,   text: "Upload your Etsy artwork" },
+    { icon: Layers,   text: "Select your sizes" },
+    { icon: Download, text: "Download all sizes as ZIP" },
   ];
 
   return (
-    <div className="relative rounded-xl border border-border bg-surface px-4 py-4">
-      <div className="flex items-start gap-3">
-        <div className="rounded-md bg-accent/10 p-1.5">
-          <FolderDown size={16} className="text-accent-light" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold leading-tight text-foreground">
-            Get print-ready files in seconds
-          </h3>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            {steps.map((step, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                {i > 0 && (
-                  <span className="mr-1 text-xs text-foreground/20">&rarr;</span>
-                )}
-                <div className="rounded-md bg-accent/15 p-1">
-                  <step.icon size={12} className="text-accent-light" />
-                </div>
-                <span className="text-xs text-foreground/60">{step.text}</span>
-              </div>
-            ))}
+    <div style={{ background: "#0B0B12", border: "1px solid rgba(45,212,191,0.2)", borderRadius: 12, padding: "14px 16px", position: "relative" }}>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss onboarding hint"
+        style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", lineHeight: 1, padding: 2 }}
+      >
+        <X size={14} />
+      </button>
+
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2DD4BF", marginBottom: 10, opacity: 0.8 }}>
+        How it works
+      </p>
+
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+        {steps.map((step, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {i > 0 && (
+              <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12, marginRight: 2 }}>&#8594;</span>
+            )}
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: 6, background: "rgba(45,212,191,0.15)", flexShrink: 0 }}>
+              <step.icon size={11} color="#2DD4BF" />
+            </span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>{step.text}</span>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
