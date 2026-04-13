@@ -452,8 +452,8 @@ export default function AppPage() {
     <div className="min-h-screen px-4 pb-16 pt-8">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
-        <div className="flex flex-col rounded-2xl border border-border bg-surface p-5 lg:max-h-[calc(100vh-9rem)]">
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
+        <div className="flex flex-col rounded-2xl border border-border bg-surface p-5">
+          <div className="flex-1 space-y-4">
           <UploadZone
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
@@ -481,7 +481,7 @@ export default function AppPage() {
           <SizeRequestLink page="packs" />
           </div>
 
-          <div className="shrink-0 space-y-2 pt-2">
+          <div className="space-y-2 pt-2">
             <GenerateButton
               disabled={!state.file || noneSelected || busy || state.globalError === "QUOTA:FREE_BATCH_LIMIT"}
               loading={busy}
