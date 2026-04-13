@@ -12,7 +12,6 @@ import { XCircle, FolderDown, Check, Download, Upload, Layers, X } from "lucide-
 import { useQuota } from "../context/QuotaContext";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
-import { SizeRequestLink } from "../components/SizeRequestLink";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -471,14 +470,6 @@ export default function AppPage() {
             remainingBatch={state.remaining?.batch}
           />
 
-          <p className="text-xs text-foreground/35">
-            Need A0, 24×36, or 24×32?{" "}
-            <a href="/app/quick-export" className="text-accent-light hover:underline">
-              Export them individually
-            </a>
-          </p>
-
-          <SizeRequestLink page="packs" />
           </div>
 
           <div className="space-y-2 pt-2">
@@ -505,6 +496,14 @@ export default function AppPage() {
                 <span className="flex items-center gap-1"><Check size={10} className="text-accent/60" />Instant ZIP</span>
               </p>
             )}
+
+            {/* Need A0 / other sizes */}
+            <p className="text-center text-xs text-foreground/30">
+              Need A0, 24×36, or 24×32?{" "}
+              <a href="/app/quick-export" className="text-accent-light hover:underline">
+                Export individually
+              </a>
+            </p>
 
             {/* Inline error under generate */}
             {state.globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
