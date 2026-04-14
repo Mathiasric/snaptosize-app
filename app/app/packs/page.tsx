@@ -201,6 +201,11 @@ export default function AppPage() {
   function abort() {
     abortRef.current?.abort();
     dispatch({ type: "set_phase", phase: "idle" });
+    for (const job of Object.values(state.jobs)) {
+      if (job.status === "running" || job.status === "queued") {
+        dispatch({ type: "set_job", job: { ...job, status: "cancelled" } });
+      }
+    }
   }
 
   // ---- Reset ----

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Download, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Clock, Loader, Lock } from "lucide-react";
+import { Download, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Clock, Loader, Lock, MinusCircle } from "lucide-react";
 import type { Group } from "./PackSelector";
 import { PACKS } from "./PackSelector";
 
-export type JobStatus = "idle" | "queued" | "running" | "done" | "error" | "locked";
+export type JobStatus = "idle" | "queued" | "running" | "done" | "error" | "locked" | "cancelled";
 
 export interface Job {
   group: Group;
@@ -65,6 +65,13 @@ const STATUS_CONFIG: Record<
     bg: "bg-accent/10",
     border: "border-accent/30",
     icon: <Lock size={12} />,
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "text-foreground/40",
+    bg: "bg-foreground/5",
+    border: "border-border",
+    icon: <MinusCircle size={12} />,
   },
 };
 
