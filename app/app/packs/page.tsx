@@ -50,6 +50,7 @@ type Action =
   | { type: "set_remaining"; remaining?: { quick: number; batch: number } }
   | { type: "set_batch_progress"; current: number; total: number }
   | { type: "cancel_in_progress" }
+  | { type: "dismiss_job"; group: Group }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -104,6 +105,11 @@ function reducer(state: State, action: Action): State {
       return { ...state, remaining: action.remaining };
     case "set_batch_progress":
       return { ...state, batchProgress: { current: action.current, total: action.total } };
+    case "dismiss_job": {
+      const jobs = { ...state.jobs };
+      delete jobs[action.group];
+      return { ...state, jobs };
+    }
     case "cancel_in_progress": {
       const jobs = { ...state.jobs };
       for (const group of Object.keys(jobs) as Group[]) {
@@ -570,7 +576,7 @@ export default function AppPage() {
             (Object.keys(state.jobs) as Group[]).map((g) => {
               const job = state.jobs[g];
               if (!job) return null;
-              return <JobCard key={g} group={g} job={job} />;
+              return <JobCard key={g} group={g} job={job} onDismiss={() => dispatch({ type: "dismiss_job", group: g })} />;
             })
           ) : (
             <OnboardingHint phase={state.phase} />

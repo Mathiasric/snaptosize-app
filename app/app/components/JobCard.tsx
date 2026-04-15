@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Download, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Clock, Loader, Lock, MinusCircle } from "lucide-react";
+import { Download, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Clock, Loader, Lock, MinusCircle, X } from "lucide-react";
 import type { Group } from "./PackSelector";
 import { PACKS } from "./PackSelector";
 
@@ -18,6 +18,7 @@ interface JobCardProps {
   group: Group;
   job: Job;
   onRetry?: () => void;
+  onDismiss?: () => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -75,7 +76,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export function JobCard({ group, job, onRetry }: JobCardProps) {
+export function JobCard({ group, job, onRetry, onDismiss }: JobCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const prevStatus = useRef(job.status);
   const [justDone, setJustDone] = useState(false);
@@ -109,15 +110,26 @@ export function JobCard({ group, job, onRetry }: JobCardProps) {
               : "border-border bg-surface"
       }`}
     >
-      {/* Header row: title + pill */}
+      {/* Header row: title + pill + dismiss */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-        <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${config.color} ${config.bg} ${config.border}`}
-        >
-          {config.icon}
-          {config.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${config.color} ${config.bg} ${config.border}`}
+          >
+            {config.icon}
+            {config.label}
+          </span>
+          {onDismiss && (job.status === "cancelled" || job.status === "error" || job.status === "done") && (
+            <button
+              onClick={onDismiss}
+              className="text-foreground/30 transition-colors hover:text-foreground/60"
+              aria-label="Dismiss"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Ready state */}
