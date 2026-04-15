@@ -567,7 +567,7 @@ export default function AppPage() {
         {/* Right: Output Panel */}
         <div className="space-y-3">
           {hasJobs ? (
-            selectedGroups.map((g) => {
+            (Object.keys(state.jobs) as Group[]).map((g) => {
               const job = state.jobs[g];
               if (!job) return null;
               return <JobCard key={g} group={g} job={job} />;
