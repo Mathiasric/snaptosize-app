@@ -106,10 +106,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, batchProgress: { current: action.current, total: action.total } };
     case "cancel_in_progress": {
       const jobs = { ...state.jobs };
-      for (const key of Object.keys(jobs)) {
-        const j = jobs[key];
-        if (j.status === "running" || j.status === "queued") {
-          jobs[key] = { ...j, status: "cancelled" };
+      for (const group of Object.keys(jobs) as Group[]) {
+        const j = jobs[group];
+        if (j && (j.status === "running" || j.status === "queued")) {
+          jobs[group] = { ...j, status: "cancelled" };
         }
       }
       return { ...state, phase: "idle", jobs };
