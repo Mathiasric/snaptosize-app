@@ -49,6 +49,7 @@ type Action =
   | { type: "add_recent_download"; download: RecentDownload }
   | { type: "set_remaining"; remaining?: { quick: number; batch: number } }
   | { type: "set_batch_progress"; current: number; total: number }
+  | { type: "cancel_in_progress" }
   | { type: "reset" };
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,16 @@ function reducer(state: State, action: Action): State {
       return { ...state, remaining: action.remaining };
     case "set_batch_progress":
       return { ...state, batchProgress: { current: action.current, total: action.total } };
+    case "cancel_in_progress": {
+      const jobs = { ...state.jobs };
+      for (const key of Object.keys(jobs)) {
+        const j = jobs[key];
+        if (j.status === "running" || j.status === "queued") {
+          jobs[key] = { ...j, status: "cancelled" };
+        }
+      }
+      return { ...state, phase: "idle", jobs };
+    }
     case "reset":
       return { ...INITIAL_STATE, file: state.file, selected: state.selected, recentDownloads: state.recentDownloads };
     default:
@@ -200,12 +211,7 @@ export default function AppPage() {
   // ---- Abort ----
   function abort() {
     abortRef.current?.abort();
-    dispatch({ type: "set_phase", phase: "idle" });
-    for (const job of Object.values(state.jobs)) {
-      if (job.status === "running" || job.status === "queued") {
-        dispatch({ type: "set_job", job: { ...job, status: "cancelled" } });
-      }
-    }
+    dispatch({ type: "cancel_in_progress" });
   }
 
   // ---- Reset ----
