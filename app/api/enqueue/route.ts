@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { sendAlert } from "../../lib/alert";
 
 export const runtime = "edge";
 
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     const ms = Date.now() - start;
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.log(JSON.stringify({ layer: "next", event: "worker_call", request_id: requestId, endpoint: "/api/enqueue", worker_path: "/enqueue", status: 502, ms, user_id: userId || undefined, error: msg }));
+    await sendAlert("Enqueue proxy failed", `request_id: ${requestId}\nuser_id: ${userId || "anon"}\nerror: ${msg}`);
     return Response.json({ error: "Enqueue proxy failed", detail: msg }, { status: 502, headers: { "x-request-id": requestId } });
   }
 }
