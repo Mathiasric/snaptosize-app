@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useReducer, useRef, useMemo } from "react";
 import { useUser, SignedOut } from "@clerk/nextjs";
+import { usePostHog } from "posthog-js/react";
 import { UploadZone } from "../components/UploadZone";
 import { GenerateButton } from "../components/GenerateButton";
 import { UpsellBanner } from "../components/UpsellBanner";
@@ -183,6 +184,7 @@ function formatRelativeTime(timestamp: number): string {
 
 export default function QuickExportPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const posthog = usePostHog();
   const abortRef = useRef<AbortController | null>(null);
   const { setRemaining: setSharedRemaining } = useQuota();
   const { user } = useUser();
@@ -386,6 +388,10 @@ export default function QuickExportPage() {
             type: "set_global_error",
             error: "QUOTA:FREE_QUICK_LIMIT",
           });
+          posthog?.capture("rate_limit_hit", {
+            kind: "FREE_QUICK_LIMIT",
+            source: "quick-export",
+          });
           return;
         }
         if (enqRes.status === 429) {
@@ -579,9 +585,9 @@ export default function QuickExportPage() {
 
             {state.globalError === "QUOTA:FREE_QUICK_LIMIT" ? (
               <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">You&apos;ve reached today&apos;s free limit.</p>
+                <p className="text-sm font-semibold text-foreground">You&apos;ve used all your free exports today.</p>
                 <p className="mt-1 text-xs text-foreground/50">
-                  Unlock unlimited exports, all ZIP packs, and watermark-free downloads.
+                  Pro gives you unlimited exports, no watermark, and 7 concurrent jobs — for $11.99/month.
                 </p>
                 <a
                   href="/app/billing?source=limit&kind=FREE_QUICK_LIMIT"

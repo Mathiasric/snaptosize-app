@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useReducer, useRef } from "react";
 import { useUser, SignedOut } from "@clerk/nextjs";
+import { usePostHog } from "posthog-js/react";
 import { UploadZone } from "../components/UploadZone";
 import { PackSelector, ALL_KEYS, PACKS } from "../components/PackSelector";
 import type { Group } from "../components/PackSelector";
@@ -164,6 +165,7 @@ function formatRelativeTime(timestamp: number): string {
 
 export default function AppPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const posthog = usePostHog();
   const abortRef = useRef<AbortController | null>(null);
   const { user } = useUser();
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
@@ -392,6 +394,10 @@ export default function AppPage() {
               type: "set_global_error",
               error: "QUOTA:FREE_BATCH_LIMIT",
             });
+            posthog?.capture("rate_limit_hit", {
+              kind: "FREE_BATCH_LIMIT",
+              source: "packs",
+            });
             break;
           }
 
@@ -525,9 +531,9 @@ export default function AppPage() {
             {/* Inline error under generate */}
             {state.globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
               <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">You&apos;ve hit today&apos;s limit.</p>
+                <p className="text-sm font-semibold text-foreground">You&apos;ve used all your free ZIP packs today.</p>
                 <p className="mt-1 text-xs text-foreground/50">
-                  Your next listing can&apos;t wait until tomorrow.
+                  Pro gives you unlimited exports, no watermark, and 7 concurrent jobs — for $11.99/month.
                 </p>
                 <a
                   href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"
