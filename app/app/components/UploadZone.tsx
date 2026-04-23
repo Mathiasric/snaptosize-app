@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, X, ImageIcon, Maximize2 } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 interface UploadZoneProps {
   file: File | null;
@@ -15,6 +16,7 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
   const [preview, setPreview] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const posthog = usePostHog();
 
   const handleFile = useCallback(
     (f: File | null) => {
@@ -107,6 +109,11 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
             {!isPro && (
               <a
                 href="/app/billing?source=watermark-preview"
+                onClick={() =>
+                  posthog?.capture("watermark_remove_clicked", {
+                    source: "upload_zone",
+                  })
+                }
                 className="flex items-center gap-1 text-[10px] font-medium text-foreground/40 transition-colors hover:text-accent-light"
               >
                 <span className="text-foreground/25">Free: includes watermark</span>
