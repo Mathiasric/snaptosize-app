@@ -273,6 +273,12 @@ export default function AppPage() {
                 jobId,
               },
             });
+            posthog?.capture("pack_export_completed", {
+              pack_template: group,
+              ratio: null,
+              plan: isPro ? "pro" : "free",
+              file_count: pack?.sizes?.length ?? null,
+            });
             return "done";
           } else if (isError(data)) {
             dispatch({
@@ -398,6 +404,11 @@ export default function AppPage() {
               kind: "FREE_BATCH_LIMIT",
               source: "packs",
             });
+            posthog?.capture("paywall_view", {
+              trigger: "FREE_BATCH_LIMIT",
+              plan: isPro ? "pro" : "free",
+              quota_used: state.remaining?.batch ?? null,
+            });
             break;
           }
 
@@ -435,6 +446,14 @@ export default function AppPage() {
           dispatch({ type: "set_remaining", remaining: enqData.remaining });
           setSharedRemaining(enqData.remaining);
         }
+
+        posthog?.capture("enqueue_success", {
+          pack_template: group,
+          ratio: null,
+          is_first_export: null,
+          plan: isPro ? "pro" : "free",
+          source: "packs",
+        });
 
         dispatch({ type: "set_job", job: { group, jobId, status: "queued" } });
 

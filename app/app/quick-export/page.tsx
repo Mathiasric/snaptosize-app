@@ -282,6 +282,10 @@ export default function QuickExportPage() {
               jobId,
             },
           });
+          posthog?.capture("quick_export_completed", {
+            ratio: state.orientation,
+            plan: isPro ? "pro" : "free",
+          });
           dispatch({ type: "set_phase", phase: "done" });
           return;
         }
@@ -392,6 +396,11 @@ export default function QuickExportPage() {
             kind: "FREE_QUICK_LIMIT",
             source: "quick-export",
           });
+          posthog?.capture("paywall_view", {
+            trigger: "FREE_QUICK_LIMIT",
+            plan: isPro ? "pro" : "free",
+            quota_used: state.remaining?.quick ?? null,
+          });
           return;
         }
         if (enqRes.status === 429) {
@@ -428,6 +437,14 @@ export default function QuickExportPage() {
         dispatch({ type: "set_remaining", remaining: enqData.remaining });
         setSharedRemaining(enqData.remaining);
       }
+
+      posthog?.capture("enqueue_success", {
+        pack_template: effectiveGroup,
+        ratio: state.orientation,
+        is_first_export: null,
+        plan: isPro ? "pro" : "free",
+        source: "quick-export",
+      });
 
       const sizeLabel = selectedSize
         ? getSizeLabel(selectedSize, state.orientation)
