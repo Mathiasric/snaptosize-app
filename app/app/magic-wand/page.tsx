@@ -273,6 +273,7 @@ export default function MagicWandPage() {
             file={state.file}
             onFileChange={(f) => dispatch({ type: "set_file", file: f })}
             disabled={isRunning}
+            isPro={isPro}
           />
 
           <PackSelector
