@@ -135,7 +135,7 @@ export default function MagicWandPage() {
     let consecutiveFailures = 0;
 
     while (!signal.aborted) {
-      if (Date.now() - start > 55_000) {
+      if (Date.now() - start > 120_000) {
         dispatch({ type: "set_job", group, job: { group, jobId, status: "error", error: "Taking too long. Retry is safe." } });
         return "error";
       }
