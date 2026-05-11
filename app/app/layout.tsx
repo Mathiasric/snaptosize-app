@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, Zap } from "lucide-react";
+import { Layers, Zap, Wand2 } from "lucide-react";
 
 const MODES = [
   { href: "/app/packs", label: "Packs", icon: Layers, pro: false },
   { href: "/app/quick-export", label: "Quick Export", icon: Zap, pro: false },
+  { href: "/app/magic-wand", label: "Magic Wand", icon: Wand2, pro: true },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
