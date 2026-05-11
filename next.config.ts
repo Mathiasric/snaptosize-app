@@ -2,7 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Next.js config options
+  experimental: { turbopack: false },
 };
 
 // Minimal Sentry config for Cloudflare Pages deployment
