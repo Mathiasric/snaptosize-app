@@ -5,11 +5,14 @@ import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "edge";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-01-28.clover",
+  });
+}
 
 export async function POST(req: Request) {
+  const stripe = getStripe();
   const { userId } = await auth();
   if (!userId) return new Response("Unauthorized", { status: 401 });
 
