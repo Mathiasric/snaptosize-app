@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React, { useState, useReducer, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { usePostHog } from "posthog-js/react";

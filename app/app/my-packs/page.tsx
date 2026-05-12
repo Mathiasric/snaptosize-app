@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { FolderHeart, Plus, Download, Lock } from "lucide-react";
