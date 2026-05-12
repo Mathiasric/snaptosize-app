@@ -5,9 +5,11 @@ import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "edge";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-01-28.clover",
+  });
+}
 
 // Idempotency guard: in-memory Set (scoped per worker instance)
 const processedEvents = new Set<string>();
@@ -21,6 +23,7 @@ async function updatePlan(userId: string, plan: "pro" | "free", stripeCustomerId
 }
 
 export async function POST(req: Request) {
+  const stripe = getStripe();
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
