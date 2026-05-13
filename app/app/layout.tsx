@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+// FolderHeart kept for upcoming My Packs nav-tab re-enable
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Layers, Zap, FolderHeart } from "lucide-react";
 
 const MODES = [
   { href: "/app/packs", label: "Packs", icon: Layers, pro: false },
   { href: "/app/quick-export", label: "Quick Export", icon: Zap, pro: false },
-  { href: "/app/my-packs", label: "My Packs", icon: FolderHeart, pro: true },
+  // Hidden during rollout testing — re-enable after Pro-account validation on app.snaptosize.com/app/my-packs
+  // { href: "/app/my-packs", label: "My Packs", icon: FolderHeart, pro: true },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
