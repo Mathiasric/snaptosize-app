@@ -254,22 +254,36 @@ export default function MyPacksPage() {
       setJob({ status: "queued" });
 
       const artworkName = file.name.replace(/\.[^.]+$/, "");
+      // Conservative: only send orientation when Landscape (Worker must swap dims).
+      // Portrait is Worker default; Square sizes are W=H so orientation is implicit.
+      const enqueuePayload: Record<string, unknown> = {
+        image_key,
+        artwork_name: artworkName,
+        custom_sizes: selectedPack.sizes,
+        pack_name: selectedPack.name,
+      };
+      if (selectedPack.orientation === "Landscape") {
+        enqueuePayload.orientation = "Landscape";
+      }
       const enqRes = await fetch("/api/enqueue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_key,
-          artwork_name: artworkName,
-          custom_sizes: selectedPack.sizes,
-          pack_name: selectedPack.name,
-          orientation: selectedPack.orientation,
-        }),
+        body: JSON.stringify(enqueuePayload),
         signal: ac.signal,
       });
 
       if (!enqRes.ok) {
         const body = await enqRes.text().catch(() => "");
-        setGlobalError(body || `HTTP ${enqRes.status}`);
+        // Include status + first 200 chars of body so we can diagnose Worker errors.
+        const detail = body ? `${body.slice(0, 200)}` : "no response body";
+        setGlobalError(`Export failed (HTTP ${enqRes.status}): ${detail}`);
+        console.error("Enqueue failed", { status: enqRes.status, body, payload: enqueuePayload });
+        posthog?.capture("custom_pack_export_failed", {
+          status: enqRes.status,
+          stage: "enqueue",
+          pack_id: selectedPack.id,
+          orientation: selectedPack.orientation,
+        });
         setPhase("error");
         return;
       }
@@ -286,7 +300,9 @@ export default function MyPacksPage() {
       setPhase("done");
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
-        setGlobalError("Unexpected error. Please try again.");
+        const msg = err instanceof Error ? err.message : String(err);
+        setGlobalError(`Export error: ${msg}`);
+        console.error("Export exception", err);
         setPhase("error");
       }
     }
@@ -404,12 +420,13 @@ export default function MyPacksPage() {
                     <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
                     <div className="flex-1">
                       <p className="font-medium text-amber-200">
-                        Image is {imageOrientation?.toLowerCase()}, pack is{" "}
+                        Heads up: your image is {imageOrientation?.toLowerCase()}, this pack is{" "}
                         {selectedPack.orientation.toLowerCase()}
                       </p>
                       <p className="mt-0.5 text-amber-300/70">
-                        Exports will be center-cropped. Parts of your art may be cut off. For best
-                        results, use a {selectedPack.orientation.toLowerCase()} source image.
+                        Your exports will be auto-fit to the center of each size — the edges will
+                        be trimmed. For the best result, upload a{" "}
+                        {selectedPack.orientation.toLowerCase()} source image.
                       </p>
                     </div>
                     <button
