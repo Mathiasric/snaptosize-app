@@ -182,7 +182,9 @@ export default function MyPacksPage() {
   async function pollJob(jobId: string, signal: AbortSignal): Promise<"done" | "error"> {
     const start = Date.now();
     let failures = 0;
+    let pollCount = 0;
     while (!signal.aborted) {
+      pollCount++;
       if (Date.now() - start > 260_000) {
         setJob({ jobId, status: "error", error: "Took too long. Please try again." });
         return "error";
@@ -192,6 +194,9 @@ export default function MyPacksPage() {
         if (res.ok) {
           failures = 0;
           const data = await res.json();
+          if (pollCount <= 3 || data.status === "error" || data.status === "done") {
+            console.log(`[my-packs] pollJob #${pollCount}`, data);
+          }
           const s = data.status ?? data.state;
           if (s === "done") {
             setJob({ jobId, status: "done" });
@@ -205,7 +210,20 @@ export default function MyPacksPage() {
             });
             return "done";
           } else if (s === "error") {
-            setJob({ jobId, status: "error", error: data.error || "Processing failed" });
+            // Worker stores error_message + error_code; older code may use error.
+            const errMsg =
+              data.error_message ||
+              data.error ||
+              (data.error_code ? `Worker error: ${data.error_code}` : null) ||
+              "Processing failed";
+            console.error("[my-packs] Worker job failed", { error_code: data.error_code, error_message: data.error_message, error: data.error, runner_status: data.runner_status, fullData: data });
+            posthog?.capture("custom_pack_job_failed", {
+              error_code: data.error_code,
+              error_message: data.error_message,
+              pack_orientation: selectedPack?.orientation,
+              size_count: selectedPack?.sizes.length,
+            });
+            setJob({ jobId, status: "error", error: errMsg });
             return "error";
           } else {
             setJob({ jobId, status: s === "queued" ? "queued" : "running" });
@@ -229,6 +247,8 @@ export default function MyPacksPage() {
   async function exportPack() {
     if (!file || !selectedPack) return;
 
+    console.log("[my-packs] exportPack START", { pack: selectedPack.name, sizes: selectedPack.sizes, orientation: selectedPack.orientation, fileSize: file.size });
+
     setPhase("uploading");
     setJob(null);
     setDownloadUrl(null);
@@ -238,21 +258,27 @@ export default function MyPacksPage() {
     abortRef.current = ac;
 
     try {
+      console.log("[my-packs] uploading file to /api/upload");
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: await file.arrayBuffer(),
         signal: ac.signal,
       });
+      console.log("[my-packs] upload response", { status: uploadRes.status, ok: uploadRes.ok });
       if (!uploadRes.ok) {
-        setGlobalError("Upload failed. Please try again.");
+        const body = await uploadRes.text().catch(() => "");
+        setGlobalError(`Upload failed (HTTP ${uploadRes.status}): ${body.slice(0, 200)}`);
+        console.error("[my-packs] Upload failed", { status: uploadRes.status, body });
         setPhase("error");
         return;
       }
 
-      const { image_key } = await uploadRes.json();
+      const uploadJson = await uploadRes.json();
+      console.log("[my-packs] upload json", uploadJson);
+      const { image_key } = uploadJson;
       if (!image_key) {
-        setGlobalError("No image_key returned from upload.");
+        setGlobalError(`No image_key in upload response: ${JSON.stringify(uploadJson)}`);
         setPhase("error");
         return;
       }
@@ -261,8 +287,6 @@ export default function MyPacksPage() {
       setJob({ status: "queued" });
 
       const artworkName = file.name.replace(/\.[^.]+$/, "");
-      // Conservative: only send orientation when Landscape (Worker must swap dims).
-      // Portrait is Worker default; Square sizes are W=H so orientation is implicit.
       const enqueuePayload: Record<string, unknown> = {
         image_key,
         artwork_name: artworkName,
@@ -272,19 +296,20 @@ export default function MyPacksPage() {
       if (selectedPack.orientation === "Landscape") {
         enqueuePayload.orientation = "Landscape";
       }
+      console.log("[my-packs] enqueue payload", enqueuePayload);
       const enqRes = await fetch("/api/enqueue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(enqueuePayload),
         signal: ac.signal,
       });
+      console.log("[my-packs] enqueue response", { status: enqRes.status, ok: enqRes.ok });
 
       if (!enqRes.ok) {
         const body = await enqRes.text().catch(() => "");
-        // Include status + first 200 chars of body so we can diagnose Worker errors.
         const detail = body ? `${body.slice(0, 200)}` : "no response body";
         setGlobalError(`Export failed (HTTP ${enqRes.status}): ${detail}`);
-        console.error("Enqueue failed", { status: enqRes.status, body, payload: enqueuePayload });
+        console.error("[my-packs] Enqueue failed", { status: enqRes.status, body, payload: enqueuePayload });
         posthog?.capture("custom_pack_export_failed", {
           status: enqRes.status,
           stage: "enqueue",
@@ -295,21 +320,25 @@ export default function MyPacksPage() {
         return;
       }
 
-      const { job_id } = await enqRes.json();
+      const enqJson = await enqRes.json();
+      console.log("[my-packs] enqueue json", enqJson);
+      const { job_id } = enqJson;
       if (!job_id) {
-        setGlobalError("No job ID returned");
+        setGlobalError(`No job_id in enqueue response: ${JSON.stringify(enqJson)}`);
         setPhase("error");
         return;
       }
 
       setJob({ jobId: job_id, status: "queued" });
-      await pollJob(job_id, ac.signal);
-      setPhase("done");
+      console.log("[my-packs] starting pollJob for", job_id);
+      const result = await pollJob(job_id, ac.signal);
+      console.log("[my-packs] pollJob finished with", result);
+      setPhase(result === "done" ? "done" : "error");
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
         const msg = err instanceof Error ? err.message : String(err);
         setGlobalError(`Export error: ${msg}`);
-        console.error("Export exception", err);
+        console.error("[my-packs] Export exception", err);
         setPhase("error");
       }
     }
