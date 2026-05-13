@@ -19,9 +19,9 @@ export const TEMPLATES: PackTemplate[] = [
   {
     id: "square-print-set",
     name: "Square Print Set",
-    description: "Every square size at once. For Instagram-aesthetic and minimalist niches.",
+    description: "Most-popular square sizes for Instagram-aesthetic and minimalist art prints.",
     orientation: "Square",
-    sizes: ["5x5", "8x8", "10x10", "12x12", "16x16", "20x20", "24x24"],
+    sizes: ["5x5", "8x8", "10x10", "12x12", "16x16"],
   },
   // Landscape Print Set hidden until Worker persists `orientation` field in KV.
   // Once Worker accepts/stores orientation in /custom-packs POST + returns it in GET,

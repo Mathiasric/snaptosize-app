@@ -159,15 +159,29 @@ export default function MyPacksPage() {
   }
 
   async function deletePack(packId: string) {
-    const r = await fetch(`/api/custom-packs/${packId}`, { method: "DELETE" });
-    if (!r.ok) return;
-    posthog?.capture("custom_pack_deleted", { pack_id: packId });
-    setPacks((prev) => prev.filter((p) => p.id !== packId));
-    setSelectedPackId((prev) => {
-      if (prev !== packId) return prev;
-      const remaining = packs.filter((p) => p.id !== packId);
-      return remaining.length > 0 ? remaining[0].id : null;
-    });
+    console.log("[my-packs] deletePack START", { packId });
+    try {
+      const r = await fetch(`/api/custom-packs/${packId}`, { method: "DELETE" });
+      console.log("[my-packs] delete response", { status: r.status, ok: r.ok });
+      if (!r.ok) {
+        const body = await r.text().catch(() => "");
+        setGlobalError(`Could not delete pack (HTTP ${r.status}): ${body.slice(0, 200)}`);
+        console.error("[my-packs] Delete failed", { status: r.status, body, packId });
+        return;
+      }
+      posthog?.capture("custom_pack_deleted", { pack_id: packId });
+      setPacks((prev) => prev.filter((p) => p.id !== packId));
+      setSelectedPackId((prev) => {
+        if (prev !== packId) return prev;
+        const remaining = packs.filter((p) => p.id !== packId);
+        return remaining.length > 0 ? remaining[0].id : null;
+      });
+      setGlobalError("");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setGlobalError(`Delete error: ${msg}`);
+      console.error("[my-packs] Delete exception", err);
+    }
   }
 
   function openCreate() {
