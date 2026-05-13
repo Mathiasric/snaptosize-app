@@ -1,7 +1,24 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, RectangleVertical, RectangleHorizontal, Square as SquareIcon } from "lucide-react";
 import type { CustomPack } from "./types";
+
+function OrientationBadge({ orientation }: { orientation: string }) {
+  const Icon =
+    orientation === "Landscape"
+      ? RectangleHorizontal
+      : orientation === "Square"
+      ? SquareIcon
+      : RectangleVertical;
+  return (
+    <span
+      title={orientation}
+      className="shrink-0 inline-flex items-center rounded-md border border-border bg-background/40 p-1 text-foreground/45"
+    >
+      <Icon size={10} />
+    </span>
+  );
+}
 
 interface Props {
   pack: CustomPack;
@@ -33,9 +50,7 @@ export function SavedPackCard({ pack, selected, onSelect, onEdit, onDelete, disa
           >
             {pack.name}
           </p>
-          <span className="shrink-0 rounded-md border border-border bg-background/40 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-foreground/45">
-            {orientation.slice(0, 3)}
-          </span>
+          <OrientationBadge orientation={orientation} />
         </div>
         <p className="mt-0.5 text-xs text-foreground/35 truncate">{pack.sizes.join(", ")}</p>
       </div>
