@@ -1,14 +1,44 @@
-﻿export interface CustomPack {
+import type { Orientation } from "../../lib/size-catalog";
+
+export interface CustomPack {
   id: string;
   name: string;
   sizes: string[];
+  orientation: Orientation;
   createdAt: number;
 }
 
-export const SIZE_CATEGORIES = [
-  { label: "2×3 Ratio", sizes: ["4x6", "6x9", "8x12", "10x15", "12x18", "16x24", "20x30"] },
-  { label: "3×4 Ratio", sizes: ["6x8", "9x12", "12x16", "15x20", "18x24"] },
-  { label: "4×5 Ratio", sizes: ["8x10", "12x15", "16x20", "20x25", "24x30"] },
-  { label: "ISO A-Series", sizes: ["A5", "A4", "A3", "A2", "A1"] },
-  { label: "Common Sizes", sizes: ["5x7", "8.5x11", "11x14", "11x17", "13x19", "20x24"] },
-] as const;
+export const MAX_SIZES_PER_PACK = 8;
+export const MAX_PACKS_PER_USER = 10;
+export const ZIP_SOFT_LIMIT_MB = 18;
+export const ZIP_HARD_LIMIT_MB = 20;
+
+/**
+ * Conservative estimate of compressed JPG size at 300 DPI quality ~85.
+ * Per square inch ≈ 0.03 MB after compression for typical photographic content.
+ */
+export function estimatePackZipMb(sizes: string[]): number {
+  let totalSqIn = 0;
+  for (const sizeId of sizes) {
+    totalSqIn += squareInchesForSize(sizeId);
+  }
+  return Math.round(totalSqIn * 0.03 * 10) / 10;
+}
+
+function squareInchesForSize(sizeId: string): number {
+  const iso: Record<string, number> = {
+    A0: 33.1 * 46.8,
+    A1: 23.4 * 33.1,
+    A2: 16.5 * 23.4,
+    A3: 11.7 * 16.5,
+    A4: 8.3 * 11.7,
+    A5: 5.8 * 8.3,
+  };
+  if (sizeId in iso) return iso[sizeId];
+
+  const parts = sizeId.split("x").map((s) => parseFloat(s));
+  if (parts.length === 2 && parts.every((n) => !isNaN(n))) {
+    return parts[0] * parts[1];
+  }
+  return 0;
+}
