@@ -3,13 +3,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { usePostHog } from "posthog-js/react";
-import { FolderHeart, Plus, Download, Lock } from "lucide-react";
+import {
+  FolderHeart,
+  Plus,
+  Download,
+  Lock,
+  Sparkles,
+  TrendingUp,
+  Square as SquareIcon,
+  RectangleHorizontal,
+  Layers,
+  X,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import Link from "next/link";
 import { UploadZone } from "../components/UploadZone";
 import { GenerateButton } from "../components/GenerateButton";
 import { SavedPackCard } from "./_components/SavedPackCard";
 import { PackBuilderModal } from "./_components/PackBuilderModal";
 import type { CustomPack } from "./_components/types";
+import { MAX_PACKS_PER_USER } from "./_components/types";
+import { TEMPLATES, type PackTemplate } from "./_components/templates";
+import type { Orientation } from "../lib/size-catalog";
 
 type Phase = "idle" | "uploading" | "polling" | "done" | "error";
 
@@ -28,9 +44,12 @@ export default function MyPacksPage() {
   const [loadingPacks, setLoadingPacks] = useState(true);
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [editingPack, setEditingPack] = useState<CustomPack | undefined>(undefined);
 
   const [file, setFile] = useState<File | null>(null);
+  const [imageOrientation, setImageOrientation] = useState<Orientation | null>(null);
+  const [dismissedOrientationWarning, setDismissedOrientationWarning] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [job, setJob] = useState<JobState | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -41,11 +60,34 @@ export default function MyPacksPage() {
   const isRunning = phase === "uploading" || phase === "polling";
   const selectedPack = packs.find((p) => p.id === selectedPackId) ?? null;
 
-  // Load packs on mount
   useEffect(() => {
     if (!isPro) return;
     fetchPacks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPro]);
+
+  // Detect orientation of uploaded image
+  useEffect(() => {
+    setDismissedOrientationWarning(false);
+    if (!file) {
+      setImageOrientation(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const ratio = img.naturalWidth / img.naturalHeight;
+      if (Math.abs(ratio - 1) < 0.05) setImageOrientation("Square");
+      else if (ratio > 1) setImageOrientation("Landscape");
+      else setImageOrientation("Portrait");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setImageOrientation(null);
+    };
+    img.src = url;
+  }, [file]);
 
   async function fetchPacks() {
     setLoadingPacks(true);
@@ -53,7 +95,9 @@ export default function MyPacksPage() {
       const r = await fetch("/api/custom-packs");
       if (r.ok) {
         const data = await r.json();
-        const sorted = (data.packs as CustomPack[]).sort((a, b) => a.createdAt - b.createdAt);
+        const sorted = (data.packs as CustomPack[])
+          .map((p) => ({ ...p, orientation: p.orientation ?? "Portrait" as Orientation }))
+          .sort((a, b) => a.createdAt - b.createdAt);
         setPacks(sorted);
         if (sorted.length > 0 && !selectedPackId) setSelectedPackId(sorted[0].id);
       }
@@ -62,25 +106,49 @@ export default function MyPacksPage() {
     }
   }
 
-  async function savePack(name: string, sizes: string[], id?: string) {
+  async function savePack(name: string, sizes: string[], orientation: Orientation, id?: string) {
     const r = await fetch("/api/custom-packs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name, sizes }),
+      body: JSON.stringify({ id, name, sizes, orientation }),
     });
     if (!r.ok) {
       const data = await r.json().catch(() => ({}));
       throw new Error(data.error || `HTTP ${r.status}`);
     }
     const data = await r.json();
-    const saved: CustomPack = data.pack;
-    posthog?.capture("custom_pack_created", { pack_id: saved.id, size_count: sizes.length });
+    const saved: CustomPack = { ...data.pack, orientation: data.pack.orientation ?? orientation };
+    posthog?.capture("custom_pack_created", {
+      pack_id: saved.id,
+      size_count: sizes.length,
+      orientation,
+      from_template: false,
+    });
     setPacks((prev) => {
       const exists = prev.find((p) => p.id === saved.id);
       if (exists) return prev.map((p) => (p.id === saved.id ? saved : p));
       return [...prev, saved];
     });
     setSelectedPackId(saved.id);
+  }
+
+  async function addTemplate(template: PackTemplate) {
+    if (packs.length >= MAX_PACKS_PER_USER) return;
+    // Avoid duplicate names — append " (copy)" if name exists
+    let name = template.name;
+    const existing = new Set(packs.map((p) => p.name));
+    if (existing.has(name)) {
+      let i = 2;
+      while (existing.has(`${name} ${i}`)) i++;
+      name = `${name} ${i}`;
+    }
+    try {
+      await savePack(name, template.sizes, template.orientation);
+      posthog?.capture("custom_pack_template_added", { template_id: template.id });
+      setShowTemplates(false);
+    } catch (e) {
+      setGlobalError(e instanceof Error ? e.message : "Could not add template");
+    }
   }
 
   async function deletePack(packId: string) {
@@ -95,15 +163,21 @@ export default function MyPacksPage() {
     });
   }
 
-  function openCreate() { setEditingPack(undefined); setShowModal(true); }
-  function openEdit(pack: CustomPack) { setEditingPack(pack); setShowModal(true); }
+  function openCreate() {
+    setEditingPack(undefined);
+    setShowModal(true);
+  }
+  function openEdit(pack: CustomPack) {
+    setEditingPack(pack);
+    setShowModal(true);
+  }
 
   async function pollJob(jobId: string, signal: AbortSignal): Promise<"done" | "error"> {
     const start = Date.now();
     let failures = 0;
     while (!signal.aborted) {
       if (Date.now() - start > 260_000) {
-        setJob({ jobId, status: "error", error: "Tok for lang tid. Prøv igjen." });
+        setJob({ jobId, status: "error", error: "Took too long. Please try again." });
         return "error";
       }
       try {
@@ -116,22 +190,27 @@ export default function MyPacksPage() {
             setJob({ jobId, status: "done" });
             setDownloadUrl(`/api/download?job_id=${encodeURIComponent(jobId)}`);
             setDownloadName(data.download_filename ?? "my_pack.zip");
-            posthog?.capture("custom_pack_exported", { pack_id: selectedPackId, pack_name: selectedPack?.name });
+            posthog?.capture("custom_pack_exported", {
+              pack_id: selectedPackId,
+              pack_name: selectedPack?.name,
+              orientation: selectedPack?.orientation,
+              size_count: selectedPack?.sizes.length,
+            });
             return "done";
           } else if (s === "error") {
-            setJob({ jobId, status: "error", error: data.error || "Prosessering feilet" });
+            setJob({ jobId, status: "error", error: data.error || "Processing failed" });
             return "error";
           } else {
             setJob({ jobId, status: s === "queued" ? "queued" : "running" });
           }
         } else if (++failures >= 10) {
-          setJob({ jobId, status: "error", error: `Serverfeil (HTTP ${res.status})` });
+          setJob({ jobId, status: "error", error: `Server error (HTTP ${res.status})` });
           return "error";
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") throw err;
         if (++failures >= 10) {
-          setJob({ jobId, status: "error", error: "Tilkobling mistet" });
+          setJob({ jobId, status: "error", error: "Connection lost" });
           return "error";
         }
       }
@@ -158,10 +237,18 @@ export default function MyPacksPage() {
         body: await file.arrayBuffer(),
         signal: ac.signal,
       });
-      if (!uploadRes.ok) { setGlobalError("Opplasting feilet. Prøv igjen."); setPhase("error"); return; }
+      if (!uploadRes.ok) {
+        setGlobalError("Upload failed. Please try again.");
+        setPhase("error");
+        return;
+      }
 
       const { image_key } = await uploadRes.json();
-      if (!image_key) { setGlobalError("Ingen image_key fra opplasting."); setPhase("error"); return; }
+      if (!image_key) {
+        setGlobalError("No image_key returned from upload.");
+        setPhase("error");
+        return;
+      }
 
       setPhase("polling");
       setJob({ status: "queued" });
@@ -175,6 +262,7 @@ export default function MyPacksPage() {
           artwork_name: artworkName,
           custom_sizes: selectedPack.sizes,
           pack_name: selectedPack.name,
+          orientation: selectedPack.orientation,
         }),
         signal: ac.signal,
       });
@@ -187,48 +275,43 @@ export default function MyPacksPage() {
       }
 
       const { job_id } = await enqRes.json();
-      if (!job_id) { setGlobalError("Ingen jobb-ID returnert"); setPhase("error"); return; }
+      if (!job_id) {
+        setGlobalError("No job ID returned");
+        setPhase("error");
+        return;
+      }
 
       setJob({ jobId: job_id, status: "queued" });
       await pollJob(job_id, ac.signal);
       setPhase("done");
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
-        setGlobalError("Uventet feil. Prøv igjen.");
+        setGlobalError("Unexpected error. Please try again.");
         setPhase("error");
       }
     }
   }
 
-  // Pro gate
+  // ───── Pro-gate (free users)
   if (user && !isPro) {
-    return (
-      <div className="mx-auto max-w-[700px] px-4 py-16 text-center">
-        <div className="mb-4 flex justify-center">
-          <span className="rounded-full bg-accent/10 p-4">
-            <Lock className="text-accent" size={28} />
-          </span>
-        </div>
-        <h2 className="mb-2 text-xl font-semibold">My Packs er en Pro-funksjon</h2>
-        <p className="mb-6 text-sm text-foreground/60">
-          Lagre dine egne størrelseskombinasjoner og eksporter med ett klikk — hver gang.
-        </p>
-        <Link
-          href="/app/billing"
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          Oppgrader til Pro
-        </Link>
-      </div>
-    );
+    return <ProGate />;
   }
 
   const jobStatusLabel = job
-    ? job.status === "queued" ? "I kø..."
-    : job.status === "running" ? "Prosesserer..."
-    : job.status === "done" ? "Ferdig"
-    : "Feil"
+    ? job.status === "queued"
+      ? "Queued..."
+      : job.status === "running"
+      ? "Processing..."
+      : job.status === "done"
+      ? "Done"
+      : "Error"
     : null;
+
+  const orientationMismatch =
+    selectedPack &&
+    imageOrientation &&
+    selectedPack.orientation !== imageOrientation &&
+    !(selectedPack.orientation === "Square" && imageOrientation === "Square");
 
   return (
     <div className="mx-auto max-w-[1000px] px-4 py-8">
@@ -239,132 +322,168 @@ export default function MyPacksPage() {
         </span>
         <div>
           <h1 className="text-lg font-semibold">My Packs</h1>
-          <p className="text-sm text-foreground/50">Lagre egne størrelsessett og eksporter med ett klikk.</p>
+          <p className="text-sm text-foreground/50">
+            Save your own size sets and export with one click.
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        {/* Left: saved packs */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
-              Dine pakker
-            </span>
-            {packs.length < 10 && (
-              <button
-                onClick={openCreate}
-                disabled={isRunning}
-                className="flex items-center gap-1 text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30"
-              >
-                <Plus size={12} />
-                Ny pakke
-              </button>
+      {/* Empty state */}
+      {!loadingPacks && packs.length === 0 ? (
+        <EmptyStateTemplates onPickTemplate={addTemplate} onBuildCustom={openCreate} />
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Left: saved packs */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+                Your packs
+              </span>
+              {packs.length < MAX_PACKS_PER_USER && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowTemplates(true)}
+                    disabled={isRunning}
+                    className="flex items-center gap-1 text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30"
+                  >
+                    <Sparkles size={12} />
+                    Templates
+                  </button>
+                  <span className="text-foreground/20">·</span>
+                  <button
+                    onClick={openCreate}
+                    disabled={isRunning}
+                    className="flex items-center gap-1 text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30"
+                  >
+                    <Plus size={12} />
+                    New
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {loadingPacks ? (
+              <p className="text-xs text-foreground/30">Loading...</p>
+            ) : (
+              <div className="space-y-2">
+                {packs.map((pack) => (
+                  <SavedPackCard
+                    key={pack.id}
+                    pack={pack}
+                    selected={selectedPackId === pack.id}
+                    onSelect={() => setSelectedPackId(pack.id)}
+                    onEdit={() => openEdit(pack)}
+                    onDelete={() => deletePack(pack.id)}
+                    disabled={isRunning}
+                  />
+                ))}
+                {packs.length >= MAX_PACKS_PER_USER && (
+                  <p className="text-xs text-foreground/30">
+                    Maximum of {MAX_PACKS_PER_USER} packs reached.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
-          {loadingPacks ? (
-            <p className="text-xs text-foreground/30">Laster...</p>
-          ) : packs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-5 text-center">
-              <p className="mb-3 text-xs text-foreground/40">Ingen pakker ennå.</p>
-              <button
-                onClick={openCreate}
-                className="text-xs font-medium text-accent hover:opacity-80"
-              >
-                + Opprett første pakke
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {packs.map((pack) => (
-                <SavedPackCard
-                  key={pack.id}
-                  pack={pack}
-                  selected={selectedPackId === pack.id}
-                  onSelect={() => setSelectedPackId(pack.id)}
-                  onEdit={() => openEdit(pack)}
-                  onDelete={() => deletePack(pack.id)}
-                  disabled={isRunning}
-                />
-              ))}
-              {packs.length >= 10 && (
-                <p className="text-xs text-foreground/30">Maks 10 pakker nådd.</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right: export */}
-        <div className="space-y-5">
-          {!selectedPack && packs.length > 0 && (
-            <p className="text-sm text-foreground/50">Velg en pakke til venstre for å eksportere.</p>
-          )}
-
-          {(selectedPack || packs.length === 0) && (
-            <>
-              <UploadZone
-                file={file}
-                onFileChange={setFile}
-                disabled={isRunning}
-                isPro={isPro}
-              />
-
-              {selectedPack && (
-                <div className="rounded-xl border border-border bg-surface/40 px-4 py-3">
-                  <p className="text-xs text-foreground/40 mb-1">Eksporterer med</p>
-                  <p className="text-sm font-medium">{selectedPack.name}</p>
-                  <p className="text-xs text-foreground/35 mt-0.5">{selectedPack.sizes.join(", ")}</p>
-                </div>
-              )}
-
-              <GenerateButton
-                disabled={!file || !selectedPack || isRunning}
-                loading={isRunning}
-                onClick={exportPack}
-                label="Eksporter pakke"
-                loadingLabel="Prosesserer..."
-              />
-
-              {/* Status */}
-              {job && (
-                <div className={`rounded-lg border px-3 py-2 text-xs ${
-                  job.status === "error"
-                    ? "border-red-500/20 bg-red-500/5 text-red-400"
-                    : job.status === "done"
-                    ? "border-green-500/20 bg-green-500/5 text-green-400"
-                    : "border-border bg-surface/40 text-foreground/60"
-                }`}>
-                  {job.status === "error" ? job.error : jobStatusLabel}
-                </div>
-              )}
-
-              {/* Download */}
-              {downloadUrl && (
-                <a
-                  href={downloadUrl}
-                  download={downloadName}
-                  className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-medium transition-colors hover:bg-surface/80"
-                >
-                  <Download size={14} className="text-accent shrink-0" />
-                  <span className="truncate">{downloadName || selectedPack?.name}</span>
-                </a>
-              )}
-
-              {globalError && (
-                <p className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
-                  {globalError}
-                </p>
-              )}
-
-              <p className="text-xs text-foreground/35 leading-relaxed">
-                Filene dine behandles sikkert og slettes automatisk etter 7 dager.
+          {/* Right: export */}
+          <div className="space-y-5">
+            {!selectedPack && packs.length > 0 && (
+              <p className="text-sm text-foreground/50">
+                Select a pack on the left to start exporting.
               </p>
-            </>
-          )}
-        </div>
-      </div>
+            )}
 
-      {/* Modal */}
+            {selectedPack && (
+              <>
+                <UploadZone file={file} onFileChange={setFile} disabled={isRunning} isPro={isPro} />
+
+                {/* Orientation mismatch warning */}
+                {orientationMismatch && !dismissedOrientationWarning && (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300/90">
+                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
+                    <div className="flex-1">
+                      <p className="font-medium text-amber-200">
+                        Image is {imageOrientation?.toLowerCase()}, pack is{" "}
+                        {selectedPack.orientation.toLowerCase()}
+                      </p>
+                      <p className="mt-0.5 text-amber-300/70">
+                        Exports will be center-cropped. Parts of your art may be cut off. For best
+                        results, use a {selectedPack.orientation.toLowerCase()} source image.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setDismissedOrientationWarning(true)}
+                      className="shrink-0 text-amber-300/60 hover:text-amber-300"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-border bg-surface/40 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-foreground/40 mb-1">Exporting with</p>
+                      <p className="text-sm font-medium">{selectedPack.name}</p>
+                      <p className="text-xs text-foreground/35 mt-0.5">
+                        {selectedPack.sizes.join(", ")}
+                      </p>
+                    </div>
+                    <span className="rounded-md border border-border bg-background/40 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground/50">
+                      {selectedPack.orientation}
+                    </span>
+                  </div>
+                </div>
+
+                <GenerateButton
+                  disabled={!file || isRunning}
+                  loading={isRunning}
+                  onClick={exportPack}
+                  label="Export pack"
+                  loadingLabel="Processing..."
+                />
+
+                {job && (
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-xs ${
+                      job.status === "error"
+                        ? "border-red-500/20 bg-red-500/5 text-red-400"
+                        : job.status === "done"
+                        ? "border-green-500/20 bg-green-500/5 text-green-400"
+                        : "border-border bg-surface/40 text-foreground/60"
+                    }`}
+                  >
+                    {job.status === "error" ? job.error : jobStatusLabel}
+                  </div>
+                )}
+
+                {downloadUrl && (
+                  <a
+                    href={downloadUrl}
+                    download={downloadName}
+                    className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-medium transition-colors hover:bg-surface/80"
+                  >
+                    <Download size={14} className="text-accent shrink-0" />
+                    <span className="truncate">{downloadName || selectedPack.name}</span>
+                  </a>
+                )}
+
+                {globalError && (
+                  <p className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+                    {globalError}
+                  </p>
+                )}
+
+                <p className="text-xs text-foreground/35 leading-relaxed">
+                  Your files are processed securely and automatically deleted after 7 days.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <PackBuilderModal
           initial={editingPack}
@@ -372,6 +491,256 @@ export default function MyPacksPage() {
           onClose={() => setShowModal(false)}
         />
       )}
+
+      {showTemplates && (
+        <TemplatesModal
+          onPick={addTemplate}
+          onClose={() => setShowTemplates(false)}
+          disabledIds={new Set(packs.map((p) => p.name))}
+          atLimit={packs.length >= MAX_PACKS_PER_USER}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Empty state
+// ─────────────────────────────────────────────────────────────
+
+function EmptyStateTemplates({
+  onPickTemplate,
+  onBuildCustom,
+}: {
+  onPickTemplate: (t: PackTemplate) => void;
+  onBuildCustom: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-sm font-semibold">Start with a recommended template</h2>
+        <p className="mt-1 text-xs text-foreground/50">
+          Curated from top-selling Etsy print sizes. One click and you&apos;re ready to export.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {TEMPLATES.map((t) => (
+          <TemplateCard key={t.id} template={t} onClick={() => onPickTemplate(t)} />
+        ))}
+      </div>
+      <div className="rounded-xl border border-dashed border-border px-4 py-3 text-center">
+        <p className="text-xs text-foreground/50">
+          Need a different size mix?{" "}
+          <button onClick={onBuildCustom} className="font-medium text-accent hover:opacity-80">
+            Build a custom pack →
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function TemplateCard({ template, onClick }: { template: PackTemplate; onClick: () => void }) {
+  const Icon = iconForTemplate(template.id);
+  return (
+    <button
+      onClick={onClick}
+      className="group rounded-xl border border-border bg-surface/40 p-4 text-left transition-colors hover:border-accent/40 hover:bg-surface"
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <span className="rounded-md bg-accent/10 p-1.5">
+          <Icon className="text-accent" size={14} />
+        </span>
+        <span className="rounded-md border border-border bg-background/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-foreground/40">
+          {template.orientation}
+        </span>
+      </div>
+      <p className="text-sm font-medium">{template.name}</p>
+      <p className="mt-1 text-xs text-foreground/45 leading-snug">{template.description}</p>
+      <p className="mt-2 text-[11px] text-foreground/35">{template.sizes.join(" · ")}</p>
+      <p className="mt-3 text-xs font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
+        + Add to My Packs
+      </p>
+    </button>
+  );
+}
+
+function iconForTemplate(id: string) {
+  switch (id) {
+    case "etsy-bestsellers":
+      return TrendingUp;
+    case "square-print-set":
+      return SquareIcon;
+    case "landscape-print-set":
+      return RectangleHorizontal;
+    default:
+      return Layers;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Templates modal (post-empty)
+// ─────────────────────────────────────────────────────────────
+
+function TemplatesModal({
+  onPick,
+  onClose,
+  disabledIds,
+  atLimit,
+}: {
+  onPick: (t: PackTemplate) => void;
+  onClose: () => void;
+  disabledIds: Set<string>;
+  atLimit: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div>
+            <h2 className="text-sm font-semibold">Templates</h2>
+            <p className="mt-0.5 text-xs text-foreground/50">
+              Add curated size sets to your packs with one click.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-foreground/40 hover:text-foreground/70">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto p-5">
+          {atLimit && (
+            <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
+              You&apos;ve reached the maximum of {MAX_PACKS_PER_USER} packs. Delete one to add a template.
+            </p>
+          )}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {TEMPLATES.map((t) => {
+              const alreadyAdded = disabledIds.has(t.name);
+              const Icon = iconForTemplate(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => !atLimit && onPick(t)}
+                  disabled={atLimit}
+                  className="group rounded-xl border border-border bg-surface/40 p-4 text-left transition-colors hover:border-accent/40 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="rounded-md bg-accent/10 p-1.5">
+                      <Icon className="text-accent" size={14} />
+                    </span>
+                    <span className="rounded-md border border-border bg-background/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-foreground/40">
+                      {t.orientation}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium">{t.name}</p>
+                  <p className="mt-1 text-xs text-foreground/45 leading-snug">{t.description}</p>
+                  <p className="mt-2 text-[11px] text-foreground/35">{t.sizes.join(" · ")}</p>
+                  {alreadyAdded && (
+                    <p className="mt-2 flex items-center gap-1 text-[11px] text-foreground/40">
+                      <CheckCircle2 size={10} /> Already added — adds a copy
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pro-gate (free users)
+// ─────────────────────────────────────────────────────────────
+
+function ProGate() {
+  return (
+    <div className="mx-auto max-w-[820px] px-4 py-12">
+      <div className="rounded-2xl border border-border bg-surface/40 p-8 sm:p-10">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="rounded-lg bg-accent/10 p-2.5">
+            <Lock className="text-accent" size={18} />
+          </span>
+          <span className="rounded-md border border-accent/30 bg-accent/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent">
+            Pro feature
+          </span>
+        </div>
+
+        <h2 className="mb-3 text-2xl font-semibold tracking-tight">
+          Save hours every week — forever.
+        </h2>
+        <p className="mb-7 max-w-[520px] text-sm text-foreground/60 leading-relaxed">
+          My Packs lets you save your custom size combinations and export with one click — every
+          time. Built for Etsy sellers who export the same sizes every week.
+        </p>
+
+        <ul className="mb-8 space-y-3 text-sm">
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent" />
+            <span>
+              <strong className="font-medium">Curated Etsy-bestseller templates</strong> — top
+              US/EU sizes ready in one click
+            </span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent" />
+            <span>
+              <strong className="font-medium">Cross-ratio packs</strong> — combine sizes across
+              ratios (regular Packs mode can&apos;t do this)
+            </span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent" />
+            <span>
+              <strong className="font-medium">Unlimited exports</strong>, no watermarks, 7
+              concurrent jobs
+            </span>
+          </li>
+        </ul>
+
+        <div className="mb-7 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-accent/40 bg-accent/5 p-4">
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-accent">
+                Yearly
+              </span>
+              <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-accent">
+                Save 32%
+              </span>
+            </div>
+            <p className="text-2xl font-semibold">
+              $97<span className="text-sm font-normal text-foreground/40">/year</span>
+            </p>
+            <p className="mt-0.5 text-xs text-foreground/45">$8.08/month, billed annually</p>
+          </div>
+          <div className="rounded-xl border border-border bg-background/30 p-4">
+            <span className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+              Monthly
+            </span>
+            <p className="mt-1 text-2xl font-semibold">
+              $11.99<span className="text-sm font-normal text-foreground/40">/month</span>
+            </p>
+            <p className="mt-0.5 text-xs text-foreground/45">Cancel any time</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link
+            href="/app/billing"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <Sparkles size={14} />
+            Upgrade to Pro
+          </Link>
+          <Link
+            href="/app/packs"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-foreground/60 transition-colors hover:bg-surface/60"
+          >
+            Use free Packs mode instead
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
