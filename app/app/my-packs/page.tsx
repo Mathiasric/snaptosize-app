@@ -23,7 +23,7 @@ import { GenerateButton } from "../components/GenerateButton";
 import { SavedPackCard } from "./_components/SavedPackCard";
 import { PackBuilderModal } from "./_components/PackBuilderModal";
 import type { CustomPack } from "./_components/types";
-import { MAX_PACKS_PER_USER } from "./_components/types";
+import { MAX_PACKS_PER_USER, deriveOrientationFromSizes } from "./_components/types";
 import { TEMPLATES, type PackTemplate } from "./_components/templates";
 import type { Orientation } from "../lib/size-catalog";
 
@@ -96,7 +96,14 @@ export default function MyPacksPage() {
       if (r.ok) {
         const data = await r.json();
         const sorted = (data.packs as CustomPack[])
-          .map((p) => ({ ...p, orientation: p.orientation ?? "Portrait" as Orientation }))
+          .map((p) => {
+            // If Worker didn't persist orientation, derive it client-side.
+            // Square sizes (W=H) → Square; otherwise default Portrait.
+            const stored = p.orientation;
+            const derived = deriveOrientationFromSizes(p.sizes);
+            const orientation: Orientation = stored ?? derived ?? "Portrait";
+            return { ...p, orientation };
+          })
           .sort((a, b) => a.createdAt - b.createdAt);
         setPacks(sorted);
         if (sorted.length > 0 && !selectedPackId) setSelectedPackId(sorted[0].id);
@@ -414,24 +421,23 @@ export default function MyPacksPage() {
               <>
                 <UploadZone file={file} onFileChange={setFile} disabled={isRunning} isPro={isPro} />
 
-                {/* Orientation mismatch warning */}
+                {/* Orientation mismatch tip */}
                 {orientationMismatch && !dismissedOrientationWarning && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300/90">
-                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
+                  <div className="flex items-start gap-2 rounded-lg border border-border bg-surface/40 px-3 py-2 text-xs text-foreground/70">
                     <div className="flex-1">
-                      <p className="font-medium text-amber-200">
-                        Heads up: your image is {imageOrientation?.toLowerCase()}, this pack is{" "}
-                        {selectedPack.orientation.toLowerCase()}
+                      <p className="font-medium text-foreground/85">
+                        Tip: this pack creates {selectedPack.orientation.toLowerCase()} prints
                       </p>
-                      <p className="mt-0.5 text-amber-300/70">
-                        Your exports will be auto-fit to the center of each size — the edges will
-                        be trimmed. For the best result, upload a{" "}
-                        {selectedPack.orientation.toLowerCase()} source image.
+                      <p className="mt-0.5 text-foreground/55">
+                        For the sharpest fit, upload a{" "}
+                        {selectedPack.orientation.toLowerCase()} image. Yours is{" "}
+                        {imageOrientation?.toLowerCase()} — you can still export, but the result
+                        will fit best with a matching source.
                       </p>
                     </div>
                     <button
                       onClick={() => setDismissedOrientationWarning(true)}
-                      className="shrink-0 text-amber-300/60 hover:text-amber-300"
+                      className="shrink-0 text-foreground/40 hover:text-foreground/70"
                     >
                       <X size={12} />
                     </button>
