@@ -161,7 +161,7 @@ export default function MyPacksPage() {
   async function deletePack(packId: string) {
     console.log("[my-packs] deletePack START", { packId });
     try {
-      const r = await fetch(`/api/custom-packs/${packId}`, { method: "DELETE" });
+      const r = await fetch(`/api/custom-packs?id=${encodeURIComponent(packId)}`, { method: "DELETE" });
       console.log("[my-packs] delete response", { status: r.status, ok: r.ok });
       if (!r.ok) {
         const body = await r.text().catch(() => "");
