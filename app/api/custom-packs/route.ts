@@ -95,3 +95,32 @@ export async function POST(req: Request) {
     return Response.json({ error: msg }, { status: 502, headers: { "x-request-id": requestId } });
   }
 }
+
+// DELETE via query param. Dynamic route /api/custom-packs/[id] does not work on
+// CF Pages with the next-on-pages adapter — it returns Next.js /500 instead of
+// matching the route. Reading id from ?id=... uses the parent static route
+// which works reliably.
+export async function DELETE(req: Request) {
+  const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    if (!id || typeof id !== "string" || id.length === 0 || id.length > 100) {
+      return Response.json(
+        { error: "Missing or invalid id query parameter" },
+        { status: 400, headers: { "x-request-id": requestId } }
+      );
+    }
+    const { userId, getToken } = await auth();
+    const token = userId ? await getToken({ template: "snap" }) : null;
+    const r = await workerFetch(`/custom-packs/${encodeURIComponent(id)}`, "DELETE", token, undefined, requestId);
+    const text = await r.text();
+    return new Response(text, {
+      status: r.status,
+      headers: { "Content-Type": "application/json", "x-request-id": requestId },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return Response.json({ error: msg }, { status: 502, headers: { "x-request-id": requestId } });
+  }
+}
