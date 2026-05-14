@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X, Check, AlertTriangle } from "lucide-react";
+import { X, Check } from "lucide-react";
 import type { CustomPack } from "./types";
 import { MAX_SIZES_PER_PACK, ZIP_SOFT_LIMIT_MB, ZIP_HARD_LIMIT_MB, estimatePackZipMb } from "./types";
 import { SIZE_CATALOG, SQUARE_SIZES, type Orientation, type SizeEntry } from "../../lib/size-catalog";
@@ -151,28 +151,14 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
           </div>
 
           {selected.size > 0 && (
-            <div
-              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
-                overHard
-                  ? "border-amber-500/40 bg-amber-500/5 text-amber-400"
-                  : overSoft
-                  ? "border-amber-500/30 bg-amber-500/5 text-amber-300/90"
-                  : "border-border bg-background/30 text-foreground/50"
+            <p
+              className={`text-xs ${
+                overHard ? "text-amber-400" : "text-foreground/45"
               }`}
             >
-              {overHard && <AlertTriangle size={12} className="mt-0.5 shrink-0" />}
-              <div>
-                <p>
-                  <span className="font-medium">Estimated ZIP:</span> ~{estimatedMb.toFixed(1)} MB
-                  <span className="text-foreground/30"> · Etsy limit 20 MB</span>
-                </p>
-                {overHard && (
-                  <p className="mt-0.5 text-amber-300/80">
-                    Larger sizes will be auto-compressed by SnapToSize to fit Etsy&apos;s 20 MB limit. Quality may be slightly reduced on the biggest prints.
-                  </p>
-                )}
-              </div>
-            </div>
+              Estimated ZIP: ~{estimatedMb.toFixed(1)} MB
+              {overHard && " — will auto-fit Etsy's 20 MB limit"}
+            </p>
           )}
 
           {error && <p className="text-xs text-red-400">{error}</p>}

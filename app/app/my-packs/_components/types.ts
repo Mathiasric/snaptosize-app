@@ -8,7 +8,7 @@ export interface CustomPack {
   createdAt: number;
 }
 
-export const MAX_SIZES_PER_PACK = 8;
+export const MAX_SIZES_PER_PACK = 7;
 export const MAX_PACKS_PER_USER = 10;
 export const ZIP_SOFT_LIMIT_MB = 18;
 export const ZIP_HARD_LIMIT_MB = 20;

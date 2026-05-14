@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 
 export const runtime = "edge";
 
-const MAX_SIZES_PER_PACK = 8;
+const MAX_SIZES_PER_PACK = 7;
 const VALID_ORIENTATIONS = new Set(["Portrait", "Landscape", "Square"]);
 
 interface PackPayload {
