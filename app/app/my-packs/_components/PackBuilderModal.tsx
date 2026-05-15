@@ -13,10 +13,9 @@ interface Props {
 }
 
 type OrientationOption = { value: Orientation; label: string };
-// Landscape hidden until Worker persists `orientation` field in KV.
-// Re-add `{ value: "Landscape", label: "Landscape" }` once that lands.
 const ORIENTATIONS: OrientationOption[] = [
   { value: "Portrait", label: "Portrait" },
+  { value: "Landscape", label: "Landscape" },
   { value: "Square", label: "Square" },
 ];
 
