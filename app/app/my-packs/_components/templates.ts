@@ -26,9 +26,9 @@ export const TEMPLATES: PackTemplate[] = [
   {
     id: "landscape-print-set",
     name: "Landscape Print Set",
-    description: "Wide formats for scenic photography and panoramic art.",
+    description: "Top-selling horizontal formats — frame-fit at Ikea, Target, Michaels.",
     orientation: "Landscape",
-    sizes: ["5x7", "8x10", "11x14", "16x20", "A4"],
+    sizes: ["8x10", "11x14", "16x20", "20x24", "A4"],
   },
 ];
 
