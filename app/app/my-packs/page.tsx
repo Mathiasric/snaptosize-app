@@ -307,9 +307,7 @@ export default function MyPacksPage() {
         custom_sizes: selectedPack.sizes,
         pack_name: selectedPack.name,
       };
-      if (selectedPack.orientation === "Landscape") {
-        enqueuePayload.orientation = "Landscape";
-      }
+      enqueuePayload.orientation = selectedPack.orientation;
       console.log("[my-packs] enqueue payload", enqueuePayload);
       const enqRes = await fetch("/api/enqueue", {
         method: "POST",
@@ -465,25 +463,17 @@ export default function MyPacksPage() {
                 <UploadZone file={file} onFileChange={setFile} disabled={isRunning} isPro={isPro} />
 
                 {/* Orientation mismatch tip */}
-                {orientationMismatch && !dismissedOrientationWarning && (
-                  <div className="flex items-start gap-2 rounded-lg border border-border bg-surface/40 px-3 py-2 text-xs text-foreground/70">
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground/85">
-                        Tip: this pack creates {selectedPack.orientation.toLowerCase()} prints
-                      </p>
-                      <p className="mt-0.5 text-foreground/55">
-                        For the sharpest fit, upload a{" "}
-                        {selectedPack.orientation.toLowerCase()} image. Yours is{" "}
-                        {imageOrientation?.toLowerCase()} — you can still export, but the result
-                        will fit best with a matching source.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setDismissedOrientationWarning(true)}
-                      className="shrink-0 text-foreground/40 hover:text-foreground/70"
-                    >
-                      <X size={12} />
-                    </button>
+                {orientationMismatch && (
+                  <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs">
+                    <p className="font-semibold text-red-300">
+                      Orientation mismatch — export blocked
+                    </p>
+                    <p className="mt-1 text-red-200/85">
+                      This pack creates {selectedPack.orientation.toLowerCase()} prints, but your
+                      image is {imageOrientation?.toLowerCase()}. Exporting would stretch the
+                      artwork and produce poor results. Upload a {selectedPack.orientation.toLowerCase()}{" "}
+                      image, or pick a {imageOrientation?.toLowerCase()} pack from your library.
+                    </p>
                   </div>
                 )}
 
@@ -493,7 +483,7 @@ export default function MyPacksPage() {
                       <p className="text-xs text-foreground/40 mb-1">Exporting with</p>
                       <p className="text-sm font-medium">{selectedPack.name}</p>
                       <p className="text-xs text-foreground/35 mt-0.5">
-                        {selectedPack.sizes.join(", ")}
+                        {selectedPack.sizes.map((s) => labelForSize(s, selectedPack.orientation)).join(", ")}
                       </p>
                     </div>
                     <span className="rounded-md border border-border bg-background/40 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground/50">
@@ -503,7 +493,7 @@ export default function MyPacksPage() {
                 </div>
 
                 <GenerateButton
-                  disabled={!file || isRunning}
+                  disabled={!file || isRunning || !!orientationMismatch}
                   loading={isRunning}
                   onClick={exportPack}
                   label="Export pack"
@@ -623,12 +613,20 @@ function TemplateCard({ template, onClick }: { template: PackTemplate; onClick: 
       </div>
       <p className="text-sm font-medium">{template.name}</p>
       <p className="mt-1 text-xs text-foreground/45 leading-snug">{template.description}</p>
-      <p className="mt-2 text-[11px] text-foreground/35">{template.sizes.join(" · ")}</p>
+      <p className="mt-2 text-[11px] text-foreground/35">{template.sizes.map((s) => labelForSize(s, template.orientation)).join(" · ")}</p>
       <p className="mt-3 text-xs font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
         + Add to My Packs
       </p>
     </button>
   );
+}
+
+function labelForSize(sizeId: string, orientation: Orientation): string {
+  if (orientation !== "Landscape") return sizeId;
+  if (sizeId.startsWith("A")) return sizeId;
+  const parts = sizeId.split("x");
+  if (parts.length === 2) return `${parts[1]}x${parts[0]}`;
+  return sizeId;
 }
 
 function iconForTemplate(id: string) {
@@ -700,7 +698,7 @@ function TemplatesModal({
                   </div>
                   <p className="text-sm font-medium">{t.name}</p>
                   <p className="mt-1 text-xs text-foreground/45 leading-snug">{t.description}</p>
-                  <p className="mt-2 text-[11px] text-foreground/35">{t.sizes.join(" · ")}</p>
+                  <p className="mt-2 text-[11px] text-foreground/35">{t.sizes.map((s) => labelForSize(s, t.orientation)).join(" · ")}</p>
                   {alreadyAdded && (
                     <p className="mt-2 flex items-center gap-1 text-[11px] text-foreground/40">
                       <CheckCircle2 size={10} /> Already added — adds a copy
