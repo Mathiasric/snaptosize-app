@@ -262,6 +262,13 @@ export default function MyPacksPage() {
     if (!file || !selectedPack) return;
 
     console.log("[my-packs] exportPack START", { pack: selectedPack.name, sizes: selectedPack.sizes, orientation: selectedPack.orientation, fileSize: file.size });
+    posthog?.capture("custom_pack_export_started", {
+      pack_id: selectedPack.id,
+      pack_name: selectedPack.name,
+      orientation: selectedPack.orientation,
+      size_count: selectedPack.sizes.length,
+      file_size_kb: Math.round(file.size / 1024),
+    });
 
     setPhase("uploading");
     setJob(null);
@@ -319,8 +326,7 @@ export default function MyPacksPage() {
 
       if (!enqRes.ok) {
         const body = await enqRes.text().catch(() => "");
-        const detail = body ? `${body.slice(0, 200)}` : "no response body";
-        setGlobalError(`Export failed (HTTP ${enqRes.status}): ${detail}`);
+        setGlobalError(friendlyEnqueueError(enqRes.status, body));
         console.error("[my-packs] Enqueue failed", { status: enqRes.status, body, payload: enqueuePayload });
         posthog?.capture("custom_pack_export_failed", {
           status: enqRes.status,
@@ -619,6 +625,24 @@ function TemplateCard({ template, onClick }: { template: PackTemplate; onClick: 
       </p>
     </button>
   );
+}
+
+function friendlyEnqueueError(status: number, body: string): string {
+  let parsed: { error?: string; error_code?: string } | null = null;
+  try { parsed = JSON.parse(body); } catch { /* not JSON */ }
+  const code = parsed?.error_code;
+  const msg = parsed?.error;
+  if (status === 401 || status === 403) return "You need an active Pro plan to export custom packs.";
+  if (status === 429) return "Too many exports running — try again in a moment.";
+  if (status === 413 || (msg && /too large/i.test(msg))) {
+    return "This pack would create a ZIP larger than Etsy's 20 MB limit. Remove a size or pick smaller dimensions.";
+  }
+  if (code === "bad_request" && msg && /pack mode/i.test(msg)) {
+    return msg; // e.g. "Sizes too large for pack mode: ['24x36']..."
+  }
+  if (status >= 500) return "Our resizer hit a hiccup. Try again — the team has been notified.";
+  if (msg) return msg;
+  return `Export failed (HTTP ${status}). Try again or contact support.`;
 }
 
 function labelForSize(sizeId: string, orientation: Orientation): string {
