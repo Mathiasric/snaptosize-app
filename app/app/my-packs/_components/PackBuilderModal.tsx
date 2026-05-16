@@ -6,6 +6,11 @@ import type { CustomPack } from "./types";
 import { MAX_SIZES_PER_PACK, ZIP_SOFT_LIMIT_MB, ZIP_HARD_LIMIT_MB, estimatePackZipMb } from "./types";
 import { SIZE_CATALOG, SQUARE_SIZES, type Orientation, type SizeEntry } from "../../lib/size-catalog";
 
+// Sizes excluded from pack mode to prevent runner OOM on the 2GB Fly machine.
+// Mirrors PACK_SIZES exclusions in runner/main.py. Still available for Quick Export
+// (single mode resizes don't hit the same memory pressure).
+const PACK_EXCLUDED_SIZE_IDS = new Set<string>(["24x36", "24x32", "A0"]);
+
 interface Props {
   initial?: CustomPack;
   onSave: (name: string, sizes: string[], orientation: Orientation, id?: string) => Promise<void>;
@@ -189,7 +194,7 @@ function buildGroupsFor(orientation: Orientation): { label: string; sizes: SizeE
   }
   return SIZE_CATALOG.map((g) => ({
     label: groupLabelFor(g.key, orientation),
-    sizes: g.sizes,
+    sizes: g.sizes.filter((s) => !PACK_EXCLUDED_SIZE_IDS.has(s.id)),
   }));
 }
 
