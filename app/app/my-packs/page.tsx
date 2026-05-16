@@ -414,7 +414,7 @@ export default function MyPacksPage() {
                   <button
                     onClick={() => setShowTemplates(true)}
                     disabled={isRunning}
-                    className="flex items-center gap-1 text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30"
+                    className="flex items-center gap-1 rounded text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <Sparkles size={12} />
                     Templates
@@ -423,7 +423,7 @@ export default function MyPacksPage() {
                   <button
                     onClick={openCreate}
                     disabled={isRunning}
-                    className="flex items-center gap-1 text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30"
+                    className="flex items-center gap-1 rounded text-xs text-foreground/40 transition-colors hover:text-accent disabled:opacity-30 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <Plus size={12} />
                     New
