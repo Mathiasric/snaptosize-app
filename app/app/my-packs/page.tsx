@@ -384,7 +384,7 @@ export default function MyPacksPage() {
     !(selectedPack.orientation === "Square" && imageOrientation === "Square");
 
   return (
-    <div className="mx-auto max-w-[1000px] px-4 py-8">
+    <div className="mx-auto max-w-[1180px] px-4 py-8">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <span className="rounded-lg bg-accent/10 p-2">
@@ -406,7 +406,7 @@ export default function MyPacksPage() {
           {/* Left: saved packs */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+              <span className="text-sm font-medium text-foreground/75">
                 Your packs
               </span>
               {packs.length < MAX_PACKS_PER_USER && (
@@ -433,7 +433,7 @@ export default function MyPacksPage() {
             </div>
 
             {loadingPacks ? (
-              <p className="text-xs text-foreground/30">Loading...</p>
+              <PackListSkeleton />
             ) : (
               <div className="space-y-2">
                 {packs.map((pack) => (
@@ -488,7 +488,7 @@ export default function MyPacksPage() {
                     <div>
                       <p className="text-xs text-foreground/40 mb-1">Exporting with</p>
                       <p className="text-sm font-medium">{selectedPack.name}</p>
-                      <p className="text-xs text-foreground/35 mt-0.5">
+                      <p className="text-xs text-foreground/35 mt-0.5 tabular-nums">
                         {selectedPack.sizes.map((s) => labelForSize(s, selectedPack.orientation)).join(", ")}
                       </p>
                     </div>
@@ -624,6 +624,27 @@ function TemplateCard({ template, onClick }: { template: PackTemplate; onClick: 
         + Add to My Packs
       </p>
     </button>
+  );
+}
+
+function PackListSkeleton() {
+  return (
+    <div className="space-y-2" aria-label="Loading your packs">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="relative w-full rounded-xl border border-border bg-background/30 p-3"
+        >
+          <div className="pr-12">
+            <div className="flex items-center gap-1.5">
+              <div className="h-3.5 w-32 animate-pulse rounded bg-foreground/10" />
+              <div className="h-5 w-5 animate-pulse rounded bg-foreground/8" />
+            </div>
+            <div className="mt-2 h-3 w-48 animate-pulse rounded bg-foreground/8" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
