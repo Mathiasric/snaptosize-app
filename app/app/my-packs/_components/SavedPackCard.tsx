@@ -3,6 +3,14 @@
 import { Pencil, Trash2, RectangleVertical, RectangleHorizontal, Square as SquareIcon } from "lucide-react";
 import type { CustomPack } from "./types";
 
+function formatSizeLabel(sizeId: string, orientation: string): string {
+  if (orientation !== "Landscape") return sizeId;
+  if (sizeId.startsWith("A")) return sizeId;
+  const parts = sizeId.split("x");
+  if (parts.length === 2) return `${parts[1]}x${parts[0]}`;
+  return sizeId;
+}
+
 function OrientationBadge({ orientation }: { orientation: string }) {
   const Icon =
     orientation === "Landscape"
@@ -52,7 +60,7 @@ export function SavedPackCard({ pack, selected, onSelect, onEdit, onDelete, disa
           </p>
           <OrientationBadge orientation={orientation} />
         </div>
-        <p className="mt-0.5 text-xs text-foreground/35 truncate">{pack.sizes.join(", ")}</p>
+        <p className="mt-0.5 text-xs text-foreground/35 truncate">{pack.sizes.map((s) => formatSizeLabel(s, orientation)).join(", ")}</p>
       </div>
 
       <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
