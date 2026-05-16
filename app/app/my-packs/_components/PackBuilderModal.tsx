@@ -155,14 +155,31 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
           </div>
 
           {selected.size > 0 && (
-            <p
-              className={`text-xs tabular-nums ${
-                overHard ? "text-amber-400" : "text-foreground/45"
-              }`}
-            >
-              Estimated ZIP: ~{estimatedMb.toFixed(1)} MB
-              {overHard && " — will auto-fit Etsy's 20 MB limit"}
-            </p>
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between text-xs tabular-nums">
+                <span className={overHard ? "text-amber-300" : "text-foreground/55"}>
+                  Estimated ZIP ~{estimatedMb.toFixed(1)} MB
+                </span>
+                <span className="text-foreground/30">/ {ZIP_HARD_LIMIT_MB} MB</span>
+              </div>
+              <div className="h-1 w-full overflow-hidden rounded-full bg-foreground/10">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    estimatedMb >= ZIP_HARD_LIMIT_MB
+                      ? "bg-red-500"
+                      : overSoft
+                      ? "bg-amber-400"
+                      : "bg-accent"
+                  }`}
+                  style={{ width: `${Math.min((estimatedMb / ZIP_HARD_LIMIT_MB) * 100, 100)}%` }}
+                />
+              </div>
+              {overHard && (
+                <p className="text-[11px] text-amber-300/90">
+                  Will auto-fit Etsy&apos;s {ZIP_HARD_LIMIT_MB} MB limit during export
+                </p>
+              )}
+            </div>
           )}
 
           {error && <p className="text-xs text-red-400">{error}</p>}

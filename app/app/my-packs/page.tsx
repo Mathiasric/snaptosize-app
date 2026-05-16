@@ -607,7 +607,7 @@ function TemplateCard({ template, onClick }: { template: PackTemplate; onClick: 
   return (
     <button
       onClick={onClick}
-      className="group rounded-xl border border-border bg-surface/40 p-4 text-left transition-colors hover:border-accent/40 hover:bg-surface"
+      className="group rounded-xl border border-border bg-surface/40 p-4 text-left transition-colors hover:border-accent/40 hover:bg-surface outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-md bg-accent/10 p-1.5">
@@ -617,6 +617,7 @@ function TemplateCard({ template, onClick }: { template: PackTemplate; onClick: 
           {template.orientation}
         </span>
       </div>
+      <TemplateRatioPreview template={template} />
       <p className="text-sm font-medium">{template.name}</p>
       <p className="mt-1 text-xs text-foreground/45 leading-snug">{template.description}</p>
       <p className="mt-2 text-[11px] text-foreground/35">{template.sizes.map((s) => labelForSize(s, template.orientation)).join(" · ")}</p>
@@ -672,6 +673,48 @@ function labelForSize(sizeId: string, orientation: Orientation): string {
   const parts = sizeId.split("x");
   if (parts.length === 2) return `${parts[1]}x${parts[0]}`;
   return sizeId;
+}
+
+const ISO_RATIOS: Record<string, [number, number]> = {
+  A5: [148, 210],
+  A4: [210, 297],
+  A3: [297, 420],
+  A2: [420, 594],
+  A1: [594, 841],
+  A0: [841, 1189],
+};
+
+function sizeAspectRatio(sizeId: string, orientation: Orientation): { w: number; h: number } {
+  let w = 1;
+  let h = 1;
+  const iso = ISO_RATIOS[sizeId];
+  if (iso) {
+    [w, h] = iso;
+  } else {
+    const parts = sizeId.split("x").map(parseFloat);
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      [w, h] = parts;
+    }
+  }
+  if (orientation === "Landscape") [w, h] = [Math.max(w, h), Math.min(w, h)];
+  const max = Math.max(w, h);
+  return { w: w / max, h: h / max };
+}
+
+function TemplateRatioPreview({ template }: { template: PackTemplate }) {
+  const ratios = template.sizes.slice(0, 3).map((s) => sizeAspectRatio(s, template.orientation));
+  const baseSize = 30; // px — longest side of the largest preview
+  return (
+    <div className="mb-3 flex h-9 items-end gap-1.5" aria-hidden>
+      {ratios.map((r, i) => (
+        <div
+          key={i}
+          className="rounded-[3px] border border-foreground/15 bg-foreground/5 transition-colors group-hover:border-accent/30 group-hover:bg-accent/5"
+          style={{ width: `${r.w * baseSize}px`, height: `${r.h * baseSize}px` }}
+        />
+      ))}
+    </div>
+  );
 }
 
 function iconForTemplate(id: string) {
