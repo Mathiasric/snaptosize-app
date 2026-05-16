@@ -120,7 +120,7 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-xs font-medium text-foreground/60">Sizes</label>
-              <span className="text-xs text-foreground/40">
+              <span className="text-xs text-foreground/40 tabular-nums">
                 {selected.size}/{MAX_SIZES_PER_PACK} selected
               </span>
             </div>
@@ -156,7 +156,7 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
 
           {selected.size > 0 && (
             <p
-              className={`text-xs ${
+              className={`text-xs tabular-nums ${
                 overHard ? "text-amber-400" : "text-foreground/45"
               }`}
             >
