@@ -11,7 +11,7 @@ function formatSizeLabel(sizeId: string, orientation: string): string {
   return sizeId;
 }
 
-function OrientationBadge({ orientation }: { orientation: string }) {
+function OrientationBadge({ orientation, selected }: { orientation: string; selected?: boolean }) {
   const Icon =
     orientation === "Landscape"
       ? RectangleHorizontal
@@ -21,9 +21,13 @@ function OrientationBadge({ orientation }: { orientation: string }) {
   return (
     <span
       title={orientation}
-      className="shrink-0 inline-flex items-center rounded-md border border-border bg-background/40 p-1 text-foreground/45"
+      className={`shrink-0 inline-flex items-center rounded-md border p-1 transition-colors ${
+        selected
+          ? "border-accent/40 bg-accent/10 text-accent"
+          : "border-border bg-background/40 text-foreground/40"
+      }`}
     >
-      <Icon size={10} />
+      <Icon size={12} />
     </span>
   );
 }
@@ -58,7 +62,7 @@ export function SavedPackCard({ pack, selected, onSelect, onEdit, onDelete, disa
           >
             {pack.name}
           </p>
-          <OrientationBadge orientation={orientation} />
+          <OrientationBadge orientation={orientation} selected={selected} />
         </div>
         <p className="mt-0.5 text-xs text-foreground/35 truncate tabular-nums">{pack.sizes.map((s) => formatSizeLabel(s, orientation)).join(", ")}</p>
       </div>

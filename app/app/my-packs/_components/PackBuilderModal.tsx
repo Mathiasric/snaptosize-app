@@ -94,7 +94,7 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. My Etsy Standard"
-              className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+              className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-accent/60 focus-visible:ring-2 focus-visible:ring-accent/50"
             />
           </div>
 
@@ -171,14 +171,14 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
           <button
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-foreground/50 hover:text-foreground/70"
+            className="rounded-md px-4 py-2 text-sm text-foreground/50 hover:text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
             {saving ? "Saving..." : "Save pack"}
           </button>
