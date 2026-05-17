@@ -774,7 +774,7 @@ function TemplatesModal({
                   key={t.id}
                   onClick={() => !atLimit && onPick(t)}
                   disabled={atLimit}
-                  className="group rounded-xl border border-border bg-surface/40 p-4 text-left transition-colors hover:border-accent/40 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                  className="group rounded-xl border border-border bg-surface/40 p-4 text-left transition-colors hover:border-accent/40 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="rounded-md bg-accent/10 p-1.5">
@@ -784,9 +784,10 @@ function TemplatesModal({
                       {t.orientation}
                     </span>
                   </div>
+                  <TemplateRatioPreview template={t} />
                   <p className="text-sm font-medium">{t.name}</p>
                   <p className="mt-1 text-xs text-foreground/45 leading-snug">{t.description}</p>
-                  <p className="mt-2 text-[11px] text-foreground/35">{t.sizes.map((s) => labelForSize(s, t.orientation)).join(" · ")}</p>
+                  <p className="mt-2 text-[11px] text-foreground/35 tabular-nums">{t.sizes.map((s) => labelForSize(s, t.orientation)).join(" · ")}</p>
                   {alreadyAdded && (
                     <p className="mt-2 flex items-center gap-1 text-[11px] text-foreground/40">
                       <CheckCircle2 size={10} /> Already added — adds a copy
