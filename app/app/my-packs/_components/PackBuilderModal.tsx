@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { X, Check } from "lucide-react";
 import type { CustomPack } from "./types";
-import { MAX_SIZES_PER_PACK, ZIP_SOFT_LIMIT_MB, ZIP_HARD_LIMIT_MB, estimatePackZipMb } from "./types";
+import { MAX_SIZES_PER_PACK } from "./types";
 import { SIZE_CATALOG, SQUARE_SIZES, type Orientation, type SizeEntry } from "../../lib/size-catalog";
 
 // Sizes excluded from pack mode to prevent runner OOM on the 2GB Fly machine.
@@ -32,9 +32,6 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
   const [error, setError] = useState("");
 
   const groups = useMemo(() => buildGroupsFor(orientation), [orientation]);
-  const estimatedMb = useMemo(() => estimatePackZipMb(Array.from(selected)), [selected]);
-  const overSoft = estimatedMb >= ZIP_SOFT_LIMIT_MB;
-  const overHard = estimatedMb >= ZIP_HARD_LIMIT_MB;
 
   function setOrientationKeepValid(next: Orientation) {
     if (next === orientation) return;
@@ -154,16 +151,6 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
             </div>
           </div>
 
-          {selected.size > 0 && (
-            <p
-              className={`text-xs tabular-nums ${
-                overHard ? "text-amber-400" : "text-foreground/45"
-              }`}
-            >
-              Estimated ZIP: ~{estimatedMb.toFixed(1)} MB
-              {overHard && " — will auto-fit Etsy's 20 MB limit"}
-            </p>
-          )}
 
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
