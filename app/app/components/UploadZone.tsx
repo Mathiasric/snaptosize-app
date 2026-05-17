@@ -161,7 +161,7 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
 
   return (
     <div>
-      <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-foreground/50">
+      <label className="mb-2 block text-sm font-medium text-foreground/75">
         Image
       </label>
       <div
