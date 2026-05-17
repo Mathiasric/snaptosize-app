@@ -69,7 +69,7 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
   if (file && preview) {
     return (
       <div>
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-foreground/50">
+        <label className="mb-2 block text-sm font-medium text-foreground/75">
           Image
         </label>
         <div className="relative rounded-xl border border-border">
@@ -104,7 +104,7 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
               <span className="max-w-[180px] truncate text-foreground/60">
                 {file.name}
               </span>
-              <span className="text-foreground/30">{formatSize(file.size)}</span>
+              <span className="text-foreground/30 tabular-nums">{formatSize(file.size)}</span>
             </div>
             {!isPro && (
               <a
@@ -161,10 +161,13 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
 
   return (
     <div>
-      <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-foreground/50">
+      <label className="mb-2 block text-sm font-medium text-foreground/75">
         Image
       </label>
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label="Upload image — drag and drop or click to browse"
         onDragOver={(e) => {
           e.preventDefault();
           if (!disabled) setDragOver(true);
@@ -172,7 +175,14 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => !disabled && inputRef.current?.click()}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-12 transition-all ${
+        onKeyDown={(e) => {
+          if (disabled) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-12 transition-all outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
           dragOver
             ? "border-accent bg-accent/5 glow-purple"
             : "border-border hover:border-foreground/20"
