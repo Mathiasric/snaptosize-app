@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { X, Check } from "lucide-react";
 import type { CustomPack } from "./types";
-import { MAX_SIZES_PER_PACK, ZIP_SOFT_LIMIT_MB, ZIP_HARD_LIMIT_MB, estimatePackZipMb } from "./types";
+import { MAX_SIZES_PER_PACK } from "./types";
 import { SIZE_CATALOG, SQUARE_SIZES, type Orientation, type SizeEntry } from "../../lib/size-catalog";
 
 // Sizes excluded from pack mode to prevent runner OOM on the 2GB Fly machine.
@@ -32,9 +32,6 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
   const [error, setError] = useState("");
 
   const groups = useMemo(() => buildGroupsFor(orientation), [orientation]);
-  const estimatedMb = useMemo(() => estimatePackZipMb(Array.from(selected)), [selected]);
-  const overSoft = estimatedMb >= ZIP_SOFT_LIMIT_MB;
-  const overHard = estimatedMb >= ZIP_HARD_LIMIT_MB;
 
   function setOrientationKeepValid(next: Orientation) {
     if (next === orientation) return;
@@ -154,33 +151,6 @@ export function PackBuilderModal({ initial, onSave, onClose }: Props) {
             </div>
           </div>
 
-          {selected.size > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between text-xs tabular-nums">
-                <span className={overHard ? "text-amber-300" : "text-foreground/55"}>
-                  Estimated ZIP ~{estimatedMb.toFixed(1)} MB
-                </span>
-                <span className="text-foreground/30">/ {ZIP_HARD_LIMIT_MB} MB</span>
-              </div>
-              <div className="h-1 w-full overflow-hidden rounded-full bg-foreground/10">
-                <div
-                  className={`h-full transition-all duration-300 ${
-                    estimatedMb >= ZIP_HARD_LIMIT_MB
-                      ? "bg-red-500"
-                      : overSoft
-                      ? "bg-amber-400"
-                      : "bg-accent"
-                  }`}
-                  style={{ width: `${Math.min((estimatedMb / ZIP_HARD_LIMIT_MB) * 100, 100)}%` }}
-                />
-              </div>
-              {overHard && (
-                <p className="text-[11px] text-amber-300/90">
-                  Will auto-fit Etsy&apos;s {ZIP_HARD_LIMIT_MB} MB limit during export
-                </p>
-              )}
-            </div>
-          )}
 
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
