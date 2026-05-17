@@ -36,7 +36,7 @@ export function PackSelector({ selected, onToggle, onSelectAll, disabled, remain
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <label className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+        <label className="text-sm font-medium text-foreground/75">
           Packs
         </label>
         <div className="flex gap-2">
@@ -59,13 +59,13 @@ export function PackSelector({ selected, onToggle, onSelectAll, disabled, remain
       </div>
 
       {remainingBatch !== undefined && remainingBatch <= 5 && (
-        <p className="mb-2 text-xs text-foreground/50">
+        <p className="mb-2 text-xs text-foreground/50 tabular-nums">
           {remainingBatch} {remainingBatch === 1 ? "pack" : "packs"} remaining today
         </p>
       )}
 
       {remainingBatch !== undefined && selectedCount > remainingBatch && (
-        <p className="mb-2 text-xs font-medium text-amber-500">
+        <p className="mb-2 text-xs font-medium text-amber-500 tabular-nums">
           You selected {selectedCount} but only have {remainingBatch} left — extras will be skipped.
         </p>
       )}
@@ -102,7 +102,7 @@ export function PackSelector({ selected, onToggle, onSelectAll, disabled, remain
                   {pack.label}
                 </span>
               </div>
-              <p className="mt-1 pl-[22px] text-xs text-foreground/35">
+              <p className="mt-1 pl-[22px] text-xs text-foreground/35 tabular-nums">
                 {pack.sizes.join(", ")}
               </p>
             </button>
