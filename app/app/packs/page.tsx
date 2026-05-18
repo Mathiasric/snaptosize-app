@@ -704,7 +704,7 @@ function OnboardingHint({ phase }: { phase: Phase }) {
   ];
 
   return (
-    <div style={{ background: "#0B0B12", border: "1px solid rgba(45,212,191,0.2)", borderRadius: 12, padding: "14px 16px", position: "relative" }}>
+    <div style={{ background: "var(--background)", border: "1px solid color-mix(in srgb, var(--info) 20%, transparent)", borderRadius: 12, padding: "14px 16px", position: "relative" }}>
       <button
         onClick={dismiss}
         aria-label="Dismiss onboarding hint"
@@ -713,7 +713,7 @@ function OnboardingHint({ phase }: { phase: Phase }) {
         <X size={14} />
       </button>
 
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2DD4BF", marginBottom: 10, opacity: 0.8 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--info)", marginBottom: 10, opacity: 0.8 }}>
         How it works
       </p>
 
@@ -723,8 +723,8 @@ function OnboardingHint({ phase }: { phase: Phase }) {
             {i > 0 && (
               <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12, marginRight: 2 }}>&#8594;</span>
             )}
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: 6, background: "rgba(45,212,191,0.15)", flexShrink: 0 }}>
-              <step.icon size={11} color="#2DD4BF" />
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: 6, background: "color-mix(in srgb, var(--info) 15%, transparent)", flexShrink: 0 }}>
+              <step.icon size={11} color="var(--info)" />
             </span>
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>{step.text}</span>
           </div>
