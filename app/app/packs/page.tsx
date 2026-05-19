@@ -599,7 +599,7 @@ export default function AppPage() {
           ) : (
             <OutputPreviewPanel
               selectedGroups={ALL_KEYS.filter((k) => state.selected[k])}
-              fileSelected={!!state.file}
+              file={state.file}
             />
           )}
 

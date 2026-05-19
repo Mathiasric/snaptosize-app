@@ -1,16 +1,32 @@
 "use client";
 
 import { useMemo } from "react";
-import { Check, FileArchive, Sparkles } from "lucide-react";
+import { Check, FileArchive, Sparkles, ImageIcon } from "lucide-react";
 import { PACKS } from "./PackSelector";
 import type { Group } from "./PackSelector";
 
 interface Props {
   selectedGroups: Group[];
-  fileSelected: boolean;
+  file: File | null;
 }
 
-export function OutputPreviewPanel({ selectedGroups, fileSelected }: Props) {
+const GROUP_SUFFIX: Record<Group, string> = {
+  "2x3": "2x3_print_sizes",
+  "3x4": "3x4_print_sizes",
+  "4x5": "4x5_print_sizes",
+  iso: "iso_print_sizes",
+  extras: "extras_print_sizes",
+};
+
+function stripExt(name: string): string {
+  return name.replace(/\.[^.]+$/, "");
+}
+
+function sanitizeArtworkName(name: string): string {
+  return stripExt(name).replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+export function OutputPreviewPanel({ selectedGroups, file }: Props) {
   const stats = useMemo(() => {
     const sel = selectedGroups
       .map((k) => PACKS.find((p) => p.key === k))
@@ -19,43 +35,56 @@ export function OutputPreviewPanel({ selectedGroups, fileSelected }: Props) {
     return { selectedPacks: sel, totalSizes };
   }, [selectedGroups]);
 
-  const ready = fileSelected && stats.selectedPacks.length > 0;
+  const artworkName = file ? sanitizeArtworkName(file.name) : "your_artwork";
+  const ready = !!file && stats.selectedPacks.length > 0;
   const hasSelection = stats.selectedPacks.length > 0;
 
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-border bg-surface/40"
       style={{
-        // Subtle radial accent in top-right corner for visual depth (no glassmorphism).
         backgroundImage:
           "radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%)",
       }}
     >
-      {/* Header: ZIP filename preview — product-as-visual */}
-      <div className="flex items-center gap-2.5 border-b border-border/70 px-5 py-3.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent/10 text-accent">
-          <FileArchive size={14} />
+      {/* Header: source file → output count */}
+      <div className="flex items-center gap-3 border-b border-border/70 px-5 py-3.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/10 text-accent">
+          <FileArchive size={15} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-mono text-foreground/85">
-            your_artwork_print_sizes.zip
+          <p className="flex items-baseline gap-1.5 text-sm">
+            {file ? (
+              <span className="flex min-w-0 items-baseline gap-1.5">
+                <ImageIcon size={11} className="shrink-0 self-center text-foreground/40" />
+                <span className="truncate font-mono text-foreground/80">{file.name}</span>
+              </span>
+            ) : (
+              <span className="font-mono text-foreground/55">your_artwork</span>
+            )}
+            <span className="text-foreground/30">→</span>
+            <span className="tabular-nums text-foreground/55">
+              {hasSelection
+                ? `${stats.selectedPacks.length} ZIP${stats.selectedPacks.length === 1 ? "" : "s"}`
+                : "—"}
+            </span>
           </p>
-          <p className="text-[11px] text-foreground/40 tabular-nums">
+          <p className="mt-0.5 text-[11px] tabular-nums text-foreground/40">
             {hasSelection
-              ? `${stats.totalSizes} ${stats.totalSizes === 1 ? "file" : "files"} · ${stats.selectedPacks.length} ${stats.selectedPacks.length === 1 ? "pack" : "packs"}`
+              ? `${stats.totalSizes} ${stats.totalSizes === 1 ? "file" : "files"} total`
               : "no packs selected"}
           </p>
         </div>
       </div>
 
-      {/* Body: grouped preview rows (per selected pack) or empty-state */}
+      {/* Body: per-pack ZIP preview rows */}
       <div className="px-5 py-4">
         {!hasSelection ? (
           <EmptyState />
         ) : (
           <ul className="space-y-3.5">
             {stats.selectedPacks.map((pack) => (
-              <PackPreviewRow key={pack.key} pack={pack} />
+              <PackPreviewRow key={pack.key} pack={pack} artworkName={artworkName} />
             ))}
           </ul>
         )}
@@ -97,15 +126,22 @@ function EmptyState() {
         Select packs on the left to assemble your export.
       </p>
       <p className="text-xs text-foreground/35">
-        Each ratio gets its own folder inside the ZIP.
+        Each ratio is delivered as its own ZIP.
       </p>
     </div>
   );
 }
 
-function PackPreviewRow({ pack }: { pack: (typeof PACKS)[number] }) {
+function PackPreviewRow({
+  pack,
+  artworkName,
+}: {
+  pack: (typeof PACKS)[number];
+  artworkName: string;
+}) {
   const ratio = ratioForPack(pack.key);
   const baseSize = 56;
+  const zipName = `${artworkName}_${GROUP_SUFFIX[pack.key]}.zip`;
   return (
     <li className="flex items-center gap-4">
       {/* Visual: ratio rectangle */}
@@ -119,10 +155,10 @@ function PackPreviewRow({ pack }: { pack: (typeof PACKS)[number] }) {
           aria-hidden
         />
       </div>
-      {/* Text: pack label + sizes list */}
+      {/* Text: ZIP filename + sizes list */}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-foreground/75">{pack.label}</p>
-        <p className="mt-0.5 truncate text-[11px] text-foreground/40 tabular-nums">
+        <p className="truncate font-mono text-[11px] text-foreground/65">{zipName}</p>
+        <p className="mt-0.5 truncate text-[11px] tabular-nums text-foreground/40">
           {pack.sizes.join(", ")}
         </p>
       </div>
