@@ -164,9 +164,36 @@ function formatRelativeTime(timestamp: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
+const INTRO_SEEN_KEY = "packs_intro_seen";
+
 export default function AppPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const posthog = usePostHog();
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null); // null until mounted (SSR safe)
+
+  // Read intro-seen flag once on mount.
+  useEffect(() => {
+    try {
+      setIntroSeen(localStorage.getItem(INTRO_SEEN_KEY) === "1");
+    } catch {
+      setIntroSeen(false);
+    }
+  }, []);
+
+  // Mark intro as seen once a successful export completes.
+  useEffect(() => {
+    if (state.phase === "done" && introSeen === false) {
+      try {
+        localStorage.setItem(INTRO_SEEN_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      setIntroSeen(true);
+    }
+  }, [state.phase, introSeen]);
+
+  // First-render: assume intro is needed (null state) so SSR matches client first-paint for new visitors.
+  const showIntro = introSeen !== true;
   const abortRef = useRef<AbortController | null>(null);
   const { user } = useUser();
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
@@ -492,6 +519,18 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen px-4 pb-16 pt-8">
+      {/* Page hero — anchors first visit, hides after first successful export */}
+      {showIntro && (
+        <header className="mx-auto mb-5 max-w-[1200px]">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Generate print packs
+          </h1>
+          <p className="mt-1 max-w-[640px] text-sm text-foreground/55">
+            Upload once. Get every standard Etsy print size as a ZIP.
+          </p>
+        </header>
+      )}
+
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
         <div className="flex flex-col rounded-2xl border border-border bg-surface p-5">
@@ -652,6 +691,32 @@ export default function AppPage() {
           )}
         </div>
       </div>
+
+      {/* Post-grid trust footer — first-visit only; hides after first export */}
+      {showIntro && (
+        <div className="mx-auto mt-10 max-w-[1200px] border-t border-border/60 pt-6">
+          <div className="grid gap-4 text-xs text-foreground/55 sm:grid-cols-3">
+            <div>
+              <p className="font-medium text-foreground/80">High resolution</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Every file rendered at 300 DPI — gallery-grade for print-on-demand and home printers alike.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground/80">Privacy by default</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Your artwork and ZIPs auto-delete after 7 days. We never share, sell, or train models on uploads.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground/80">Built for Etsy sellers</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Every ratio in this tool matches an Etsy listing format. No conversion math, no rejected uploads.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
