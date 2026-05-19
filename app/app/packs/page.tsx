@@ -9,6 +9,7 @@ import type { Group } from "../components/PackSelector";
 import { JobCard } from "../components/JobCard";
 import type { Job, JobStatus } from "../components/JobCard";
 import { GenerateButton } from "../components/GenerateButton";
+import { OutputPreviewPanel } from "../components/OutputPreviewPanel";
 import { XCircle, FolderDown, Check, Download, Upload, Layers, X } from "lucide-react";
 import { useQuota } from "../context/QuotaContext";
 import { UpsellBanner } from "../components/UpsellBanner";
@@ -530,14 +531,6 @@ export default function AppPage() {
               </p>
             )}
 
-            {/* Micro-copy: conversion trust signals */}
-            {!busy && !state.globalError && (
-              <p className="flex items-center justify-center gap-3 text-xs text-foreground/30">
-                <span className="flex items-center gap-1"><Check size={10} className="text-accent/60" />300 DPI</span>
-                <span className="flex items-center gap-1"><Check size={10} className="text-accent/60" />Print-ready</span>
-                <span className="flex items-center gap-1"><Check size={10} className="text-accent/60" />Instant ZIP</span>
-              </p>
-            )}
 
             {/* Need A0 / other sizes */}
             <p className="text-center text-xs text-foreground/30">
@@ -604,7 +597,10 @@ export default function AppPage() {
               return <JobCard key={g} group={g} job={job} onDismiss={() => dispatch({ type: "dismiss_job", group: g })} />;
             })
           ) : (
-            <OnboardingHint phase={state.phase} />
+            <OutputPreviewPanel
+              selectedGroups={ALL_KEYS.filter((k) => state.selected[k])}
+              fileSelected={!!state.file}
+            />
           )}
 
           {/* Recent Downloads */}
