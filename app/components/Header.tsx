@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs";
+import { CreditCard } from "lucide-react";
 import { useQuota } from "../app/context/QuotaContext";
 
 function QuotaBadge() {
@@ -46,8 +47,6 @@ function PlanIndicator() {
 }
 
 export function Header() {
-  const { signOut } = useClerk();
-
   // Override Clerk's __unstable__onBeforeSetActive to prevent server action
   // POST to static pages (causes 405 on Cloudflare Pages).
   // Clerk sets this in useLayoutEffect; our useEffect runs after, overriding it.
@@ -55,12 +54,6 @@ export function Header() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__unstable__onBeforeSetActive = () => Promise.resolve();
   }, []);
-
-  const handleSignOut = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    void signOut({ redirectUrl: "/" });
-  };
 
   return (
     <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-3">
@@ -96,19 +89,27 @@ export function Header() {
         <SignedIn>
           <QuotaBadge />
           <PlanIndicator />
-          <Link
-            href="/app/billing"
-            className="text-foreground/60 transition-colors hover:text-accent-light"
+          <UserButton
+            afterSignOutUrl="/"
+            appearance={{
+              elements: {
+                avatarBox: "h-8 w-8 ring-1 ring-border hover:ring-accent/50 transition-all",
+                userButtonPopoverCard: "bg-surface border border-border shadow-xl rounded-xl",
+                userButtonPopoverActionButton:
+                  "text-foreground/70 hover:text-foreground hover:bg-surface/80",
+                userButtonPopoverActionButtonText: "text-sm",
+                userButtonPopoverFooter: "hidden",
+              },
+            }}
           >
-            Billing
-          </Link>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="rounded-full border border-border px-4 py-1.5 text-sm text-foreground/60 transition-colors hover:border-accent/40 hover:text-foreground"
-          >
-            Sign out
-          </button>
+            <UserButton.MenuItems>
+              <UserButton.Link
+                label="Billing"
+                labelIcon={<CreditCard size={14} />}
+                href="/app/billing"
+              />
+            </UserButton.MenuItems>
+          </UserButton>
         </SignedIn>
       </nav>
     </header>
