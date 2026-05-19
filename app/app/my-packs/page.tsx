@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { usePostHog } from "posthog-js/react";
 import {
-  FolderHeart,
   Plus,
   Download,
   Lock,
@@ -22,6 +21,7 @@ import { UploadZone } from "../components/UploadZone";
 import { GenerateButton } from "../components/GenerateButton";
 import { SavedPackCard } from "./_components/SavedPackCard";
 import { PackBuilderModal } from "./_components/PackBuilderModal";
+import { MyPacksPreviewPanel } from "./_components/MyPacksPreviewPanel";
 import type { CustomPack } from "./_components/types";
 import { MAX_PACKS_PER_USER, deriveOrientationFromSizes } from "./_components/types";
 import { TEMPLATES, type PackTemplate } from "./_components/templates";
@@ -59,6 +59,27 @@ export default function MyPacksPage() {
   const abortRef = useRef<AbortController | null>(null);
   const isRunning = phase === "uploading" || phase === "polling";
   const selectedPack = packs.find((p) => p.id === selectedPackId) ?? null;
+
+  // Progressive disclosure: hide hero + trust footer after first successful export
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
+  useEffect(() => {
+    try {
+      setIntroSeen(localStorage.getItem("my_packs_intro_seen") === "1");
+    } catch {
+      setIntroSeen(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (phase === "done" && job?.status === "done" && introSeen === false) {
+      try {
+        localStorage.setItem("my_packs_intro_seen", "1");
+      } catch {
+        /* ignore */
+      }
+      setIntroSeen(true);
+    }
+  }, [phase, job?.status, introSeen]);
+  const showIntro = introSeen !== true;
 
   useEffect(() => {
     if (!isPro) return;
@@ -385,18 +406,17 @@ export default function MyPacksPage() {
 
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-8">
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-3">
-        <span className="rounded-lg bg-accent/10 p-2">
-          <FolderHeart className="text-accent" size={20} />
-        </span>
-        <div>
-          <h1 className="text-lg font-semibold">My Packs</h1>
-          <p className="text-sm text-foreground/50">
-            Save your own size sets and export with one click.
+      {/* Page hero — anchors first visit, hides after first successful export */}
+      {showIntro && (
+        <header className="mb-5">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            My packs
+          </h1>
+          <p className="mt-1 max-w-[640px] text-sm text-foreground/55">
+            Saved size sets — one click to export your artwork as a print-ready ZIP.
           </p>
-        </div>
-      </div>
+        </header>
+      )}
 
       {/* Empty state */}
       {!loadingPacks && packs.length === 0 ? (
@@ -466,7 +486,7 @@ export default function MyPacksPage() {
 
             {selectedPack && (
               <>
-                <UploadZone file={file} onFileChange={setFile} disabled={isRunning} isPro={isPro} />
+                <UploadZone file={file} onFileChange={setFile} disabled={isRunning} isPro={isPro} compact />
 
                 {/* Orientation mismatch tip */}
                 {orientationMismatch && (
@@ -483,20 +503,12 @@ export default function MyPacksPage() {
                   </div>
                 )}
 
-                <div className="rounded-xl border border-border bg-surface/40 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-foreground/40 mb-1">Exporting with</p>
-                      <p className="text-sm font-medium">{selectedPack.name}</p>
-                      <p className="text-xs text-foreground/35 mt-0.5 tabular-nums">
-                        {selectedPack.sizes.map((s) => labelForSize(s, selectedPack.orientation)).join(", ")}
-                      </p>
-                    </div>
-                    <span className="rounded-md border border-border bg-background/40 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground/50">
-                      {selectedPack.orientation}
-                    </span>
-                  </div>
-                </div>
+                <MyPacksPreviewPanel
+                  file={file}
+                  pack={selectedPack}
+                  labelForSize={labelForSize}
+                />
+
 
                 <GenerateButton
                   disabled={!file || isRunning || !!orientationMismatch}
@@ -537,11 +549,34 @@ export default function MyPacksPage() {
                   </p>
                 )}
 
-                <p className="text-xs text-foreground/35 leading-relaxed">
-                  Your files are processed securely and automatically deleted after 7 days.
-                </p>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Post-grid trust footer — first-visit only; hides after first export */}
+      {showIntro && (
+        <div className="mt-10 border-t border-border/60 pt-6">
+          <div className="grid gap-4 text-xs text-foreground/55 sm:grid-cols-3">
+            <div>
+              <p className="font-medium text-foreground/80">High resolution</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Every file rendered at 300 DPI — gallery-grade for print-on-demand and home printers alike.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground/80">Privacy by default</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Your artwork and ZIPs auto-delete after 7 days. We never share, sell, or train models on uploads.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground/80">One-click export</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Saved size sets stay ready in your library — pick a pack, drop in a new artwork, get a ZIP.
+              </p>
+            </div>
           </div>
         </div>
       )}

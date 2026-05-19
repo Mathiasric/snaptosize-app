@@ -9,9 +9,11 @@ interface UploadZoneProps {
   onFileChange: (file: File | null) => void;
   disabled: boolean;
   isPro?: boolean;
+  /** Compact variant: reduced vertical padding for sidebar/secondary placements */
+  compact?: boolean;
 }
 
-export function UploadZone({ file, onFileChange, disabled, isPro = false }: UploadZoneProps) {
+export function UploadZone({ file, onFileChange, disabled, isPro = false, compact = false }: UploadZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -182,7 +184,7 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false }: Uplo
             inputRef.current?.click();
           }
         }}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-12 transition-all outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed ${compact ? "py-7" : "py-12"} transition-all outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
           dragOver
             ? "border-accent bg-accent/5 glow-purple"
             : "border-border hover:border-foreground/20"
