@@ -41,10 +41,10 @@ export function OutputPreviewPanel({ selectedGroups, file }: Props) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-border bg-surface/40"
+      className="relative overflow-hidden rounded-2xl border border-accent/15 bg-surface/40"
       style={{
         backgroundImage:
-          "radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%)",
+          "radial-gradient(140% 90% at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%)",
       }}
     >
       {/* Header: source file → output count */}
@@ -121,13 +121,36 @@ export function OutputPreviewPanel({ selectedGroups, file }: Props) {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-start gap-2 py-3">
-      <p className="text-sm leading-relaxed text-foreground/55">
-        Select packs on the left to assemble your export.
-      </p>
-      <p className="text-xs text-foreground/35">
-        Each ratio is delivered as its own ZIP.
-      </p>
+    <div className="flex flex-col items-center gap-4 py-6">
+      <StackedFilesIllustration />
+      <div className="text-center">
+        <p className="text-sm leading-relaxed text-foreground/65">
+          Select packs on the left to assemble your export.
+        </p>
+        <p className="mt-1 text-xs text-foreground/40">
+          Each ratio is delivered as its own ZIP.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StackedFilesIllustration() {
+  // CSS-drawn stack of three rectangles, fanning slightly. Linear-style minimal art.
+  return (
+    <div className="relative h-24 w-28" aria-hidden>
+      <div
+        className="absolute left-1 top-4 h-20 w-14 rounded-md border border-foreground/15 bg-foreground/[0.03]"
+        style={{ transform: "rotate(-6deg)" }}
+      />
+      <div
+        className="absolute left-7 top-2 h-20 w-14 rounded-md border border-foreground/20 bg-foreground/[0.05]"
+        style={{ transform: "rotate(2deg)" }}
+      />
+      <div
+        className="absolute left-12 top-0 h-20 w-14 rounded-md border border-accent/30 bg-accent/[0.06]"
+        style={{ transform: "rotate(8deg)" }}
+      />
     </div>
   );
 }

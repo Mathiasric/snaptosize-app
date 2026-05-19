@@ -492,6 +492,16 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen px-4 pb-16 pt-8">
+      {/* Page hero — anchors the page and signals what this tool does */}
+      <header className="mx-auto mb-8 max-w-[1200px]">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">
+          Generate print packs
+        </h1>
+        <p className="mt-1.5 max-w-[640px] text-sm text-foreground/55 leading-relaxed">
+          Upload your artwork once. Get every standard Etsy print size as a ready-to-upload ZIP, automatically cropped and optimized.
+        </p>
+      </header>
+
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
         <div className="flex flex-col rounded-2xl border border-border bg-surface p-5">
@@ -650,6 +660,30 @@ export default function AppPage() {
               )}
             </>
           )}
+        </div>
+      </div>
+
+      {/* Post-grid trust footer — fills the dead space below and reinforces guarantees */}
+      <div className="mx-auto mt-10 max-w-[1200px] border-t border-border/60 pt-6">
+        <div className="grid gap-4 text-xs text-foreground/55 sm:grid-cols-3">
+          <div>
+            <p className="font-medium text-foreground/80">High resolution</p>
+            <p className="mt-1 leading-relaxed text-foreground/45">
+              Every file rendered at 300 DPI — gallery-grade for print-on-demand and home printers alike.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium text-foreground/80">Privacy by default</p>
+            <p className="mt-1 leading-relaxed text-foreground/45">
+              Your artwork and ZIPs auto-delete after 7 days. We never share, sell, or train models on uploads.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium text-foreground/80">Built for Etsy sellers</p>
+            <p className="mt-1 leading-relaxed text-foreground/45">
+              Every ratio in this tool matches an Etsy listing format. No conversion math, no rejected uploads.
+            </p>
+          </div>
         </div>
       </div>
     </div>
