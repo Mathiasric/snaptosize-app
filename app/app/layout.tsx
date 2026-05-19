@@ -19,24 +19,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div>
       {/* Mode navigation */}
-      <div className="border-b border-border bg-surface/50">
-        <div className="mx-auto flex max-w-[1200px] gap-1 px-4 pt-2">
+      <div className="border-b border-border bg-surface/40">
+        <div className="mx-auto flex max-w-[1200px] gap-1 px-4 py-2">
           {MODES.map(({ href, label, icon: Icon, pro }) => {
             const active = pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-1.5 rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                aria-current={active ? "page" : undefined}
+                className={`group flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                   active
-                    ? "border-b-2 border-accent bg-surface text-foreground"
-                    : "text-foreground/40 hover:bg-surface/80 hover:text-foreground/60"
+                    ? "bg-accent/10 text-foreground ring-1 ring-inset ring-accent/20"
+                    : "text-foreground/50 hover:bg-surface/70 hover:text-foreground/80"
                 }`}
               >
-                <Icon size={14} />
+                <Icon
+                  size={14}
+                  className={active ? "text-accent-light" : "text-foreground/45 group-hover:text-foreground/70"}
+                />
                 {label}
                 {pro && (
-                  <span className="ml-0.5 rounded px-1 py-0.5 text-[10px] font-semibold leading-none bg-accent/20 text-accent">
+                  <span className="ml-0.5 rounded-sm bg-accent/20 px-1 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wider text-accent-light">
                     Pro
                   </span>
                 )}
