@@ -74,60 +74,66 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false, compac
         <label className="mb-2 block text-sm font-medium text-foreground/75">
           Image
         </label>
-        <div className="relative rounded-xl border border-border">
-          {/* Micro preview — click to zoom */}
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="group relative grid w-full cursor-pointer place-items-center p-4"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)",
-              borderRadius: "0.75rem 0.75rem 0 0",
-            }}
-          >
-            <img
-              src={preview}
-              alt="Preview"
-              style={{ maxHeight: "280px" }}
-              className="h-auto w-auto max-w-full rounded object-contain object-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
-            />
-            {/* Zoom hint */}
-            <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-1 text-[10px] text-white/50 opacity-0 transition-opacity group-hover:opacity-100">
-              <Maximize2 size={10} />
-              Click to zoom
-            </span>
-          </button>
-
-          {/* File info bar */}
-          <div className="flex items-center justify-between border-t border-border/50 px-3 py-2">
-            <div className="flex items-center gap-2 text-xs">
-              <ImageIcon size={12} className="text-foreground/40" />
-              <span className="max-w-[180px] truncate text-foreground/60">
-                {file.name}
+        <div className="relative overflow-hidden rounded-xl border border-border">
+          <div className="flex items-stretch">
+            {/* Left: thumb preview (click to zoom) */}
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="group relative grid w-32 shrink-0 cursor-pointer place-items-center p-2 sm:w-40"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)",
+              }}
+              aria-label="Zoom preview"
+            >
+              <img
+                src={preview}
+                alt="Preview"
+                style={{ maxHeight: "120px" }}
+                className="h-auto w-auto max-w-full rounded object-contain object-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+              />
+              <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[9px] text-white/55 opacity-0 transition-opacity group-hover:opacity-100">
+                <Maximize2 size={9} />
+                Zoom
               </span>
-              <span className="text-foreground/30 tabular-nums">{formatSize(file.size)}</span>
+            </button>
+
+            {/* Middle: filename + size + watermark notice */}
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 border-l border-border/50 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm">
+                <ImageIcon size={13} className="shrink-0 text-foreground/40" />
+                <span className="truncate font-medium text-foreground/80">
+                  {file.name}
+                </span>
+              </div>
+              <p className="text-xs tabular-nums text-foreground/40">
+                {formatSize(file.size)}
+              </p>
+              {!isPro && (
+                <a
+                  href="/app/billing?source=watermark-preview"
+                  onClick={() =>
+                    posthog?.capture("watermark_remove_clicked", {
+                      source: "upload_zone",
+                    })
+                  }
+                  className="mt-0.5 inline-flex items-center gap-1 self-start text-[10px] font-medium text-foreground/40 transition-colors hover:text-accent-light"
+                >
+                  <span className="text-foreground/25">Free: includes watermark</span>
+                  <span className="text-accent-light">&middot; Remove</span>
+                </a>
+              )}
             </div>
-            {!isPro && (
-              <a
-                href="/app/billing?source=watermark-preview"
-                onClick={() =>
-                  posthog?.capture("watermark_remove_clicked", {
-                    source: "upload_zone",
-                  })
-                }
-                className="flex items-center gap-1 text-[10px] font-medium text-foreground/40 transition-colors hover:text-accent-light"
-              >
-                <span className="text-foreground/25">Free: includes watermark</span>
-                <span className="text-accent-light">&middot; Remove</span>
-              </a>
-            )}
+
+            {/* Right: remove button */}
             {!disabled && (
               <button
                 onClick={handleRemove}
-                className="rounded-md p-1 text-foreground/40 transition-colors hover:bg-error/10 hover:text-error"
+                aria-label="Remove image"
+                className="flex shrink-0 items-center justify-center border-l border-border/50 px-3 text-foreground/40 transition-colors hover:bg-error/10 hover:text-error"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             )}
           </div>
