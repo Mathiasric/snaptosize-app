@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Check, X, Upload, Layers, Download } from "lucide-react";
+import { useMemo } from "react";
+import { Check, FileArchive, Sparkles } from "lucide-react";
 import { PACKS } from "./PackSelector";
 import type { Group } from "./PackSelector";
-
-const ONBOARDING_KEY = "onboarding_dismissed";
 
 interface Props {
   selectedGroups: Group[];
@@ -22,86 +20,117 @@ export function OutputPreviewPanel({ selectedGroups, fileSelected }: Props) {
   }, [selectedGroups]);
 
   const ready = fileSelected && stats.selectedPacks.length > 0;
+  const hasSelection = stats.selectedPacks.length > 0;
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl border border-border bg-surface/40 p-5">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h3 className="text-sm font-medium text-foreground/75">Output preview</h3>
-          {stats.totalSizes > 0 && (
-            <span className="text-xs text-foreground/40 tabular-nums">
-              {stats.totalSizes} {stats.totalSizes === 1 ? "size" : "sizes"} · {stats.selectedPacks.length} {stats.selectedPacks.length === 1 ? "pack" : "packs"}
-            </span>
-          )}
-        </div>
-
-        {stats.selectedPacks.length === 0 ? (
-          <EmptyStateCopy />
-        ) : (
-          <RatioPreviewRow packs={stats.selectedPacks} />
-        )}
-
-        {/* Trust strip */}
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-xs text-foreground/40">
-          <span className="flex items-center gap-1">
-            <Check size={11} className="text-accent/70" /> 300 DPI
-          </span>
-          <span className="flex items-center gap-1">
-            <Check size={11} className="text-accent/70" /> Print-ready
-          </span>
-          <span className="flex items-center gap-1">
-            <Check size={11} className="text-accent/70" /> Instant ZIP
-          </span>
-        </div>
-
-        {ready && (
-          <p className="mt-3 text-xs font-medium text-accent-light">
-            Ready to export — click Generate.
+    <div
+      className="relative overflow-hidden rounded-2xl border border-border bg-surface/40"
+      style={{
+        // Subtle radial accent in top-right corner for visual depth (no glassmorphism).
+        backgroundImage:
+          "radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%)",
+      }}
+    >
+      {/* Header: ZIP filename preview — product-as-visual */}
+      <div className="flex items-center gap-2.5 border-b border-border/70 px-5 py-3.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent/10 text-accent">
+          <FileArchive size={14} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-mono text-foreground/85">
+            your_artwork_print_sizes.zip
           </p>
+          <p className="text-[11px] text-foreground/40 tabular-nums">
+            {hasSelection
+              ? `${stats.totalSizes} ${stats.totalSizes === 1 ? "file" : "files"} · ${stats.selectedPacks.length} ${stats.selectedPacks.length === 1 ? "pack" : "packs"}`
+              : "no packs selected"}
+          </p>
+        </div>
+      </div>
+
+      {/* Body: grouped preview rows (per selected pack) or empty-state */}
+      <div className="px-5 py-4">
+        {!hasSelection ? (
+          <EmptyState />
+        ) : (
+          <ul className="space-y-3.5">
+            {stats.selectedPacks.map((pack) => (
+              <PackPreviewRow key={pack.key} pack={pack} />
+            ))}
+          </ul>
         )}
       </div>
 
-      <OnboardingHint />
+      {/* Footer: trust strip + ready hint */}
+      <div className="border-t border-border/70 px-5 py-3">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] text-foreground/45">
+          <span className="flex items-center gap-1">
+            <Check size={11} className="text-accent/80" />
+            300 DPI
+          </span>
+          <span className="text-foreground/15">/</span>
+          <span className="flex items-center gap-1">
+            <Check size={11} className="text-accent/80" />
+            Print-ready
+          </span>
+          <span className="text-foreground/15">/</span>
+          <span className="flex items-center gap-1">
+            <Check size={11} className="text-accent/80" />
+            Instant ZIP
+          </span>
+        </div>
+        {ready && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-accent-light">
+            <Sparkles size={12} />
+            Ready to export
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-function EmptyStateCopy() {
+function EmptyState() {
   return (
-    <p className="text-xs text-foreground/40 leading-relaxed">
-      Select packs on the left to see what your ZIP will include. Each size is delivered at print-shop quality.
-    </p>
+    <div className="flex flex-col items-start gap-2 py-3">
+      <p className="text-sm leading-relaxed text-foreground/55">
+        Select packs on the left to assemble your export.
+      </p>
+      <p className="text-xs text-foreground/35">
+        Each ratio gets its own folder inside the ZIP.
+      </p>
+    </div>
   );
 }
 
-function RatioPreviewRow({ packs }: { packs: (typeof PACKS)[number][] }) {
-  // For each pack render one representative rectangle scaled to the pack's aspect ratio.
-  // Baseline 30px on the long side.
-  const baseSize = 30;
+function PackPreviewRow({ pack }: { pack: (typeof PACKS)[number] }) {
+  const ratio = ratioForPack(pack.key);
+  const baseSize = 56;
   return (
-    <div className="flex h-9 items-end gap-3" aria-hidden>
-      {packs.map((pack) => {
-        const ratio = ratioForPack(pack.key);
-        const w = ratio.w * baseSize;
-        const h = ratio.h * baseSize;
-        return (
-          <div key={pack.key} className="flex flex-col items-center gap-1">
-            <div
-              className="rounded-[3px] border border-foreground/15 bg-foreground/5"
-              style={{ width: `${w}px`, height: `${h}px` }}
-            />
-            <span className="text-[9px] uppercase tracking-wider text-foreground/30">
-              {pack.key === "iso" ? "ISO" : pack.label.split(" ")[0]}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <li className="flex items-center gap-4">
+      {/* Visual: ratio rectangle */}
+      <div className="flex h-14 w-14 shrink-0 items-end justify-center">
+        <div
+          className="rounded-[4px] border border-foreground/20 bg-foreground/[0.04]"
+          style={{
+            width: `${ratio.w * baseSize}px`,
+            height: `${ratio.h * baseSize}px`,
+          }}
+          aria-hidden
+        />
+      </div>
+      {/* Text: pack label + sizes list */}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-foreground/75">{pack.label}</p>
+        <p className="mt-0.5 truncate text-[11px] text-foreground/40 tabular-nums">
+          {pack.sizes.join(", ")}
+        </p>
+      </div>
+    </li>
   );
 }
 
 function ratioForPack(key: Group): { w: number; h: number } {
-  // Portrait orientation, normalized so longest side = 1.
   switch (key) {
     case "2x3":
       return { w: 2 / 3, h: 1 };
@@ -110,71 +139,10 @@ function ratioForPack(key: Group): { w: number; h: number } {
     case "4x5":
       return { w: 4 / 5, h: 1 };
     case "iso":
-      return { w: 1 / Math.SQRT2, h: 1 }; // A-series 1:√2
+      return { w: 1 / Math.SQRT2, h: 1 };
     case "extras":
-      return { w: 0.78, h: 1 }; // Mixed; show 11x14-ish as representative
+      return { w: 0.78, h: 1 };
     default:
       return { w: 1, h: 1 };
   }
-}
-
-// ---------------------------------------------------------------------------
-// Onboarding hint — 3-step inline, dismissible, hides after first export
-// ---------------------------------------------------------------------------
-
-const steps = [
-  { icon: Upload, label: "Upload artwork" },
-  { icon: Layers, label: "Select sizes" },
-  { icon: Download, label: "Download ZIP" },
-];
-
-function OnboardingHint() {
-  const [dismissed, setDismissed] = useState(true);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    try {
-      setDismissed(localStorage.getItem(ONBOARDING_KEY) === "1");
-    } catch {
-      setDismissed(false);
-    }
-  }, []);
-
-  function dismiss() {
-    try {
-      localStorage.setItem(ONBOARDING_KEY, "1");
-    } catch {
-      /* ignore */
-    }
-    setDismissed(true);
-  }
-
-  if (!mounted || dismissed) return null;
-
-  return (
-    <div className="relative rounded-xl border border-info/20 bg-info/[0.04] px-4 py-3">
-      <button
-        onClick={dismiss}
-        aria-label="Dismiss"
-        className="absolute right-2 top-2 rounded p-1 text-foreground/30 hover:text-foreground/60"
-      >
-        <X size={12} />
-      </button>
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-info/80">
-        How it works
-      </p>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/65">
-        {steps.map((step, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            {i > 0 && <span className="text-foreground/20">→</span>}
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-info/15">
-              <step.icon size={11} className="text-info" />
-            </span>
-            <span>{step.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
