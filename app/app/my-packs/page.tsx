@@ -422,7 +422,7 @@ export default function MyPacksPage() {
       {!loadingPacks && packs.length === 0 ? (
         <EmptyStateTemplates onPickTemplate={addTemplate} onBuildCustom={openCreate} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,720px)]">
+        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,580px)]">
           {/* Left: saved packs */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
