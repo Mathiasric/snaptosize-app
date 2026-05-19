@@ -36,7 +36,6 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules",
-    "**/_archived/**"
+    "node_modules"
   ]
 }
