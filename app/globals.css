@@ -6,6 +6,7 @@
   --accent: #7C3AED;
   --accent-light: #8B5CF6;
   --success: #22C55E;
+  --info: #2DD4BF;
   --error: #EF4444;
   --surface: #13111C;
   --border: #1E1B2E;
@@ -19,6 +20,7 @@
   --color-accent: var(--accent);
   --color-accent-light: var(--accent-light);
   --color-success: var(--success);
+  --color-info: var(--info);
   --color-error: var(--error);
   --color-surface: var(--surface);
   --color-border: var(--border);

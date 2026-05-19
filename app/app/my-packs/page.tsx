@@ -855,40 +855,40 @@ function ProGate() {
         <div className="mb-7 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-accent/40 bg-accent/5 p-4">
             <div className="mb-1 flex items-baseline justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-accent">
+              <span className="text-sm font-medium text-accent">
                 Yearly
               </span>
               <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-accent">
                 Save 32%
               </span>
             </div>
-            <p className="text-2xl font-semibold">
+            <p className="text-2xl font-semibold tabular-nums">
               $97<span className="text-sm font-normal text-foreground/40">/year</span>
             </p>
-            <p className="mt-0.5 text-xs text-foreground/45">$8.08/month, billed annually</p>
+            <p className="mt-0.5 text-xs text-foreground/45 tabular-nums">$8.08/month, billed annually</p>
           </div>
           <div className="rounded-xl border border-border bg-background/30 p-4">
-            <span className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+            <span className="text-sm font-medium text-foreground/70">
               Monthly
             </span>
-            <p className="mt-1 text-2xl font-semibold">
+            <p className="mt-1 text-2xl font-semibold tabular-nums">
               $11.99<span className="text-sm font-normal text-foreground/40">/month</span>
             </p>
             <p className="mt-0.5 text-xs text-foreground/45">Cancel any time</p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Link
             href="/app/billing"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
             <Sparkles size={14} />
             Upgrade to Pro
           </Link>
           <Link
             href="/app/packs"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-foreground/60 transition-colors hover:bg-surface/60"
+            className="inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm text-foreground/50 transition-colors hover:text-foreground/80 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
             Use free Packs mode instead
           </Link>
