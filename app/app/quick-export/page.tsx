@@ -8,6 +8,7 @@ import { GenerateButton } from "../components/GenerateButton";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
 import { SizeRequestLink } from "../components/SizeRequestLink";
+import { QuickExportPreviewPanel } from "../components/QuickExportPreviewPanel";
 import {
   XCircle,
   Download,
@@ -182,9 +183,36 @@ function formatRelativeTime(timestamp: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
+const INTRO_SEEN_KEY = "quick_export_intro_seen";
+
 export default function QuickExportPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const posthog = usePostHog();
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null); // null until mounted (SSR safe)
+
+  // Read intro-seen flag once on mount.
+  useEffect(() => {
+    try {
+      setIntroSeen(localStorage.getItem(INTRO_SEEN_KEY) === "1");
+    } catch {
+      setIntroSeen(false);
+    }
+  }, []);
+
+  // Mark intro as seen once a successful export completes.
+  useEffect(() => {
+    if (state.phase === "done" && state.job?.status === "done" && introSeen === false) {
+      try {
+        localStorage.setItem(INTRO_SEEN_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      setIntroSeen(true);
+    }
+  }, [state.phase, state.job?.status, introSeen]);
+
+  // First-render: assume intro is needed so SSR matches client first-paint for new visitors.
+  const showIntro = introSeen !== true;
   const abortRef = useRef<AbortController | null>(null);
   const { setRemaining: setSharedRemaining } = useQuota();
   const { user } = useUser();
@@ -481,6 +509,18 @@ export default function QuickExportPage() {
 
   return (
     <div className="min-h-screen px-4 pb-16 pt-8">
+      {/* Page hero — anchors first visit, hides after first successful export */}
+      {showIntro && (
+        <header className="mx-auto mb-5 max-w-[1200px]">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Quick export
+          </h1>
+          <p className="mt-1 max-w-[640px] text-sm text-foreground/55">
+            Pick one size. Get a single print-ready JPG — no pack, no ZIP.
+          </p>
+        </header>
+      )}
+
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left: Input Panel */}
         <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
@@ -583,23 +623,6 @@ export default function QuickExportPage() {
               </p>
             )}
 
-            {!busy && !state.globalError && (
-              <p className="flex items-center justify-center gap-3 text-xs text-foreground/30">
-                <span className="flex items-center gap-1">
-                  <Check size={10} className="text-accent/60" />
-                  300 DPI
-                </span>
-                <span className="flex items-center gap-1">
-                  <Check size={10} className="text-accent/60" />
-                  Single JPG
-                </span>
-                <span className="flex items-center gap-1">
-                  <Check size={10} className="text-accent/60" />
-                  Instant download
-                </span>
-              </p>
-            )}
-
             {state.globalError === "QUOTA:FREE_QUICK_LIMIT" ? (
               <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
                 <p className="text-sm font-semibold text-foreground">You&apos;ve used all your free exports today.</p>
@@ -653,7 +676,11 @@ export default function QuickExportPage() {
               onRetry={state.job.status === "error" ? exportSingle : undefined}
             />
           ) : (
-            <QuickExportEmptyState />
+            <QuickExportPreviewPanel
+              file={state.file}
+              sizeEntry={selectedSize ?? null}
+              orientation={state.orientation}
+            />
           )}
 
           {/* Recent Downloads */}
@@ -707,6 +734,32 @@ export default function QuickExportPage() {
           )}
         </div>
       </div>
+
+      {/* Post-grid trust footer — first-visit only; hides after first export */}
+      {showIntro && (
+        <div className="mx-auto mt-10 max-w-[1200px] border-t border-border/60 pt-6">
+          <div className="grid gap-4 text-xs text-foreground/55 sm:grid-cols-3">
+            <div>
+              <p className="font-medium text-foreground/80">High resolution</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Every JPG rendered at 300 DPI — gallery-grade for print-on-demand and home printers alike.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground/80">Privacy by default</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Your artwork and exports auto-delete after 7 days. We never share, sell, or train models on uploads.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground/80">One size, one file</p>
+              <p className="mt-1 leading-relaxed text-foreground/45">
+                Quick Export gives you a single print-ready JPG for the exact size you picked — no pack, no ZIP.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
