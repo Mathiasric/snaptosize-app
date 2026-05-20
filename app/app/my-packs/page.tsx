@@ -15,6 +15,7 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
+  Loader,
 } from "lucide-react";
 import Link from "next/link";
 import { UploadZone } from "../components/UploadZone";
@@ -525,10 +526,25 @@ export default function MyPacksPage() {
                         ? "border-red-500/20 bg-red-500/5 text-red-400"
                         : job.status === "done"
                         ? "border-green-500/20 bg-green-500/5 text-green-400"
+                        : job.status === "running"
+                        ? "border-accent/30 bg-accent/10 text-accent-light"
                         : "border-border bg-surface/40 text-foreground/60"
                     }`}
                   >
-                    {job.status === "error" ? job.error : jobStatusLabel}
+                    <div className="flex items-center gap-1.5">
+                      {job.status === "running" && (
+                        <Loader size={12} className="shrink-0 animate-spin" />
+                      )}
+                      {job.status === "done" && (
+                        <CheckCircle2 size={12} className="shrink-0" />
+                      )}
+                      <span>{job.status === "error" ? job.error : jobStatusLabel}</span>
+                    </div>
+                    {job.status === "running" && (
+                      <div className="relative mt-2 h-1 w-full overflow-hidden rounded-full bg-accent/10">
+                        <div className="animate-shimmer-sweep absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-accent to-transparent" />
+                      </div>
+                    )}
                   </div>
                 )}
 

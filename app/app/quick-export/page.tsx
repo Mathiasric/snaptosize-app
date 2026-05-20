@@ -832,6 +832,15 @@ function QuickJobCard({
         </span>
       </div>
 
+      {/* Running state — indeterminate shimmer bar */}
+      {job.status === "running" && (
+        <div className="mt-3">
+          <div className="relative h-1 w-full overflow-hidden rounded-full bg-accent/10">
+            <div className="animate-shimmer-sweep absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-accent to-transparent" />
+          </div>
+        </div>
+      )}
+
       {job.status === "done" && (
         <div className="mt-3">
           <p className="mb-2 text-xs text-success/70">
