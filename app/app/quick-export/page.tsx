@@ -521,7 +521,7 @@ export default function QuickExportPage() {
         </header>
       )}
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         {/* Left: Input Panel */}
         <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
           <UploadZone

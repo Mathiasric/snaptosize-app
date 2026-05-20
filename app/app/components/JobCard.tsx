@@ -76,17 +76,10 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const RUNNING_HINTS = [
-  "Resizing your artwork…",
-  "Rendering at 300 DPI…",
-  "Packaging your ZIP…",
-];
-
 export function JobCard({ group, job, onRetry, onDismiss }: JobCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const prevStatus = useRef(job.status);
   const [justDone, setJustDone] = useState(false);
-  const [hintIndex, setHintIndex] = useState(0);
 
   useEffect(() => {
     if (prevStatus.current !== "done" && job.status === "done") {
@@ -95,19 +88,6 @@ export function JobCard({ group, job, onRetry, onDismiss }: JobCardProps) {
       return () => clearTimeout(t);
     }
     prevStatus.current = job.status;
-  }, [job.status]);
-
-  // Cycle through honest stage hints while the pack is processing.
-  useEffect(() => {
-    if (job.status !== "running") {
-      setHintIndex(0);
-      return;
-    }
-    const id = setInterval(
-      () => setHintIndex((i) => (i + 1) % RUNNING_HINTS.length),
-      2500,
-    );
-    return () => clearInterval(id);
   }, [job.status]);
 
   const pack = PACKS.find((p) => p.key === group);
@@ -152,15 +132,12 @@ export function JobCard({ group, job, onRetry, onDismiss }: JobCardProps) {
         </div>
       </div>
 
-      {/* Running state — indeterminate shimmer + rotating stage hint */}
+      {/* Running state — indeterminate shimmer bar */}
       {job.status === "running" && (
         <div className="mt-3">
           <div className="relative h-1 w-full overflow-hidden rounded-full bg-accent/10">
             <div className="animate-shimmer-sweep absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-accent to-transparent" />
           </div>
-          <p className="mt-2 text-xs text-accent-light/80" aria-live="polite">
-            {RUNNING_HINTS[hintIndex]}
-          </p>
         </div>
       )}
 
