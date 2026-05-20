@@ -357,13 +357,23 @@ export default function MyPacksPage() {
 
       if (!enqRes.ok) {
         const body = await enqRes.text().catch(() => "");
-        setGlobalError(friendlyEnqueueError(enqRes.status, body));
-        posthog?.capture("custom_pack_export_failed", {
-          status: enqRes.status,
-          stage: "enqueue",
-          pack_id: selectedPack.id,
-          orientation: selectedPack.orientation,
-        });
+        // Daily free quota hit → conversion-focused upsell, not a raw error code
+        if (enqRes.status === 402) {
+          setGlobalError("QUOTA:FREE_BATCH_LIMIT");
+          posthog?.capture("paywall_view", {
+            trigger: "FREE_BATCH_LIMIT",
+            plan: "free",
+            source: "my-packs",
+          });
+        } else {
+          setGlobalError(friendlyEnqueueError(enqRes.status, body));
+          posthog?.capture("custom_pack_export_failed", {
+            status: enqRes.status,
+            stage: "enqueue",
+            pack_id: selectedPack.id,
+            orientation: selectedPack.orientation,
+          });
+        }
         setPhase("error");
         return;
       }
@@ -400,6 +410,7 @@ export default function MyPacksPage() {
     : null;
 
   const orientationMismatch =
+    file &&
     selectedPack &&
     imageOrientation &&
     selectedPack.orientation !== imageOrientation &&
@@ -587,11 +598,31 @@ export default function MyPacksPage() {
                   </a>
                 )}
 
-                {globalError && (
+                {globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
+                  <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      You&apos;ve used your 2 free exports today
+                    </p>
+                    <p className="mt-1 text-xs text-foreground/55">
+                      Upgrade to Pro for unlimited exports — no daily cap, no watermark.
+                    </p>
+                    <a
+                      href="/app/billing?source=my-packs-quota"
+                      onClick={() =>
+                        posthog?.capture("my_packs_quota_upsell_clicked", {
+                          source: "my-packs-quota",
+                        })
+                      }
+                      className="gradient-btn mt-2 inline-block rounded-md px-4 py-1.5 text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    >
+                      Unlock Pro
+                    </a>
+                  </div>
+                ) : globalError ? (
                   <p className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
                     {globalError}
                   </p>
-                )}
+                ) : null}
 
               </>
             )}
