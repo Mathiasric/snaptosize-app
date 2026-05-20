@@ -40,6 +40,10 @@ export default function MyPacksPage() {
   const { user } = useUser();
   const posthog = usePostHog();
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === "pro";
+  // Free tier gets a single saved pack so they can feel the save→reuse flow;
+  // Pro unlocks the full library. Export watermark + daily quota are enforced
+  // server-side regardless of plan.
+  const packLimit = isPro ? MAX_PACKS_PER_USER : 1;
 
   const [packs, setPacks] = useState<CustomPack[]>([]);
   const [loadingPacks, setLoadingPacks] = useState(true);
@@ -91,7 +95,6 @@ export default function MyPacksPage() {
   }, [selectedPackId]);
 
   useEffect(() => {
-    if (!isPro) return;
     fetchPacks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPro]);
@@ -170,7 +173,7 @@ export default function MyPacksPage() {
   }
 
   async function addTemplate(template: PackTemplate) {
-    if (packs.length >= MAX_PACKS_PER_USER) return;
+    if (packs.length >= packLimit) return;
     // Avoid duplicate names — append " (copy)" if name exists
     let name = template.name;
     const existing = new Set(packs.map((p) => p.name));
@@ -372,10 +375,6 @@ export default function MyPacksPage() {
     }
   }
 
-  // ───── Pro-gate (free users)
-  if (user && !isPro) {
-    return <ProGate />;
-  }
 
   const jobStatusLabel = job
     ? job.status === "queued"
@@ -418,7 +417,7 @@ export default function MyPacksPage() {
               <span className="text-sm font-medium text-foreground/75">
                 Your packs
               </span>
-              {packs.length < MAX_PACKS_PER_USER && (
+              {packs.length < packLimit && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowTemplates(true)}
@@ -456,10 +455,26 @@ export default function MyPacksPage() {
                     disabled={isRunning}
                   />
                 ))}
-                {packs.length >= MAX_PACKS_PER_USER && (
+                {packs.length >= packLimit && isPro && (
                   <p className="text-xs text-foreground/30">
                     Maximum of {MAX_PACKS_PER_USER} packs reached.
                   </p>
+                )}
+                {packs.length >= packLimit && !isPro && (
+                  <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      You&apos;re using your free saved pack
+                    </p>
+                    <p className="mt-1 text-xs text-foreground/55">
+                      Upgrade to Pro for unlimited saved packs and watermark-free exports.
+                    </p>
+                    <a
+                      href="/app/billing?source=my-packs-limit"
+                      className="gradient-btn mt-2 inline-block rounded-md px-4 py-1.5 text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    >
+                      Unlock Pro
+                    </a>
+                  </div>
                 )}
               </div>
             )}
@@ -605,7 +620,7 @@ export default function MyPacksPage() {
           onPick={addTemplate}
           onClose={() => setShowTemplates(false)}
           disabledIds={new Set(packs.map((p) => p.name))}
-          atLimit={packs.length >= MAX_PACKS_PER_USER}
+          atLimit={packs.length >= packLimit}
         />
       )}
     </div>
