@@ -82,6 +82,14 @@ export default function MyPacksPage() {
   }, [phase, job?.status, introSeen]);
   const showIntro = introSeen !== true;
 
+  // Reset export state when switching packs so the preview panel returns
+  // (pack switching is disabled while a job runs, so this never fires mid-export).
+  useEffect(() => {
+    setJob(null);
+    setDownloadUrl(null);
+    setPhase("idle");
+  }, [selectedPackId]);
+
   useEffect(() => {
     if (!isPro) return;
     fetchPacks();
@@ -504,12 +512,13 @@ export default function MyPacksPage() {
                   </div>
                 )}
 
-                <MyPacksPreviewPanel
-                  file={file}
-                  pack={selectedPack}
-                  labelForSize={labelForSize}
-                />
-
+                {!job && (
+                  <MyPacksPreviewPanel
+                    file={file}
+                    pack={selectedPack}
+                    labelForSize={labelForSize}
+                  />
+                )}
 
                 <GenerateButton
                   disabled={!file || isRunning || !!orientationMismatch}
@@ -519,13 +528,12 @@ export default function MyPacksPage() {
                   loadingLabel="Processing..."
                 />
 
-                {job && (
+                {/* In-progress / error status (done collapses into the success card below) */}
+                {job && job.status !== "done" && (
                   <div
                     className={`rounded-lg border px-3 py-2 text-xs ${
                       job.status === "error"
                         ? "border-red-500/20 bg-red-500/5 text-red-400"
-                        : job.status === "done"
-                        ? "border-green-500/20 bg-green-500/5 text-green-400"
                         : job.status === "running"
                         ? "border-accent/30 bg-accent/10 text-accent-light"
                         : "border-border bg-surface/40 text-foreground/60"
@@ -534,9 +542,6 @@ export default function MyPacksPage() {
                     <div className="flex items-center gap-1.5">
                       {job.status === "running" && (
                         <Loader size={12} className="shrink-0 animate-spin" />
-                      )}
-                      {job.status === "done" && (
-                        <CheckCircle2 size={12} className="shrink-0" />
                       )}
                       <span>{job.status === "error" ? job.error : jobStatusLabel}</span>
                     </div>
@@ -548,14 +553,24 @@ export default function MyPacksPage() {
                   </div>
                 )}
 
-                {downloadUrl && (
+                {/* Success card — merges done-status + download into one element */}
+                {job?.status === "done" && downloadUrl && (
                   <a
                     href={downloadUrl}
                     download={downloadName}
-                    className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-medium transition-colors hover:bg-surface/80"
+                    className="flex items-center gap-3 rounded-lg border border-success/20 bg-success/5 px-4 py-3 transition-colors hover:bg-success/10"
                   >
-                    <Download size={14} className="text-accent shrink-0" />
-                    <span className="truncate">{downloadName || selectedPack.name}</span>
+                    <CheckCircle2 size={16} className="shrink-0 text-success" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-success">Pack ready</p>
+                      <p className="truncate text-xs text-foreground/50">
+                        {downloadName || selectedPack.name}
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-semibold text-success">
+                      <Download size={14} />
+                      Download
+                    </span>
                   </a>
                 )}
 
