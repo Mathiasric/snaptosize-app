@@ -79,3 +79,29 @@ body {
 .animate-success-pop {
   animation: success-pop 0.4s ease-out;
 }
+
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 1.4s ease-in-out infinite;
+}
+
+/* Respect users who prefer reduced motion: disable looping/decorative
+   animations and collapse transitions to near-instant. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-dot,
+  .animate-slide-in-up,
+  .animate-success-pop,
+  .animate-shimmer-sweep,
+  .animate-spin {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
