@@ -94,6 +94,19 @@ export default function MyPacksPage() {
     setPhase("idle");
   }, [selectedPackId]);
 
+  // Fire once when a free user hits their saved-pack ceiling (drives the
+  // model-C-vs-hard-wall conversion comparison).
+  const upsellViewedRef = useRef(false);
+  useEffect(() => {
+    if (!isPro && !loadingPacks && packs.length >= packLimit && !upsellViewedRef.current) {
+      upsellViewedRef.current = true;
+      posthog?.capture("my_packs_ceiling_upsell_viewed", {
+        plan: "free",
+        pack_count: packs.length,
+      });
+    }
+  }, [isPro, loadingPacks, packs.length, packLimit, posthog]);
+
   useEffect(() => {
     fetchPacks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -470,6 +483,11 @@ export default function MyPacksPage() {
                     </p>
                     <a
                       href="/app/billing?source=my-packs-limit"
+                      onClick={() =>
+                        posthog?.capture("my_packs_ceiling_upsell_clicked", {
+                          source: "my-packs-limit",
+                        })
+                      }
                       className="gradient-btn mt-2 inline-block rounded-md px-4 py-1.5 text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                     >
                       Unlock Pro
