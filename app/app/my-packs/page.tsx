@@ -189,14 +189,11 @@ export default function MyPacksPage() {
   }
 
   async function deletePack(packId: string) {
-    console.log("[my-packs] deletePack START", { packId });
     try {
       const r = await fetch(`/api/custom-packs?id=${encodeURIComponent(packId)}`, { method: "DELETE" });
-      console.log("[my-packs] delete response", { status: r.status, ok: r.ok });
       if (!r.ok) {
         const body = await r.text().catch(() => "");
         setGlobalError(`Could not delete pack (HTTP ${r.status}): ${body.slice(0, 200)}`);
-        console.error("[my-packs] Delete failed", { status: r.status, body, packId });
         return;
       }
       posthog?.capture("custom_pack_deleted", { pack_id: packId });
@@ -210,7 +207,6 @@ export default function MyPacksPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setGlobalError(`Delete error: ${msg}`);
-      console.error("[my-packs] Delete exception", err);
     }
   }
 
@@ -238,9 +234,6 @@ export default function MyPacksPage() {
         if (res.ok) {
           failures = 0;
           const data = await res.json();
-          if (pollCount <= 3 || data.status === "error" || data.status === "done") {
-            console.log(`[my-packs] pollJob #${pollCount}`, data);
-          }
           const s = data.status ?? data.state;
           if (s === "done") {
             setJob({ jobId, status: "done" });
@@ -260,7 +253,6 @@ export default function MyPacksPage() {
               data.error ||
               (data.error_code ? `Worker error: ${data.error_code}` : null) ||
               "Processing failed";
-            console.error("[my-packs] Worker job failed", { error_code: data.error_code, error_message: data.error_message, error: data.error, runner_status: data.runner_status, fullData: data });
             posthog?.capture("custom_pack_job_failed", {
               error_code: data.error_code,
               error_message: data.error_message,
@@ -291,7 +283,6 @@ export default function MyPacksPage() {
   async function exportPack() {
     if (!file || !selectedPack) return;
 
-    console.log("[my-packs] exportPack START", { pack: selectedPack.name, sizes: selectedPack.sizes, orientation: selectedPack.orientation, fileSize: file.size });
     posthog?.capture("custom_pack_export_started", {
       pack_id: selectedPack.id,
       pack_name: selectedPack.name,
@@ -309,24 +300,20 @@ export default function MyPacksPage() {
     abortRef.current = ac;
 
     try {
-      console.log("[my-packs] uploading file to /api/upload");
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: await file.arrayBuffer(),
         signal: ac.signal,
       });
-      console.log("[my-packs] upload response", { status: uploadRes.status, ok: uploadRes.ok });
       if (!uploadRes.ok) {
         const body = await uploadRes.text().catch(() => "");
         setGlobalError(`Upload failed (HTTP ${uploadRes.status}): ${body.slice(0, 200)}`);
-        console.error("[my-packs] Upload failed", { status: uploadRes.status, body });
         setPhase("error");
         return;
       }
 
       const uploadJson = await uploadRes.json();
-      console.log("[my-packs] upload json", uploadJson);
       const { image_key } = uploadJson;
       if (!image_key) {
         setGlobalError(`No image_key in upload response: ${JSON.stringify(uploadJson)}`);
@@ -345,19 +332,16 @@ export default function MyPacksPage() {
         pack_name: selectedPack.name,
       };
       enqueuePayload.orientation = selectedPack.orientation;
-      console.log("[my-packs] enqueue payload", enqueuePayload);
       const enqRes = await fetch("/api/enqueue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(enqueuePayload),
         signal: ac.signal,
       });
-      console.log("[my-packs] enqueue response", { status: enqRes.status, ok: enqRes.ok });
 
       if (!enqRes.ok) {
         const body = await enqRes.text().catch(() => "");
         setGlobalError(friendlyEnqueueError(enqRes.status, body));
-        console.error("[my-packs] Enqueue failed", { status: enqRes.status, body, payload: enqueuePayload });
         posthog?.capture("custom_pack_export_failed", {
           status: enqRes.status,
           stage: "enqueue",
@@ -369,7 +353,6 @@ export default function MyPacksPage() {
       }
 
       const enqJson = await enqRes.json();
-      console.log("[my-packs] enqueue json", enqJson);
       const { job_id } = enqJson;
       if (!job_id) {
         setGlobalError(`No job_id in enqueue response: ${JSON.stringify(enqJson)}`);
@@ -378,15 +361,12 @@ export default function MyPacksPage() {
       }
 
       setJob({ jobId: job_id, status: "queued" });
-      console.log("[my-packs] starting pollJob for", job_id);
       const result = await pollJob(job_id, ac.signal);
-      console.log("[my-packs] pollJob finished with", result);
       setPhase(result === "done" ? "done" : "error");
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
         const msg = err instanceof Error ? err.message : String(err);
         setGlobalError(`Export error: ${msg}`);
-        console.error("[my-packs] Export exception", err);
         setPhase("error");
       }
     }
