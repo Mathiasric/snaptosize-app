@@ -42,7 +42,37 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ClerkProvider>
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: "#7C3AED",
+              colorBackground: "#13111C",
+              colorText: "#E5E5E5",
+              colorTextSecondary: "#9CA3AF",
+              colorInputBackground: "#0B0B12",
+              colorInputText: "#E5E5E5",
+              colorNeutral: "#E5E5E5",
+              colorDanger: "#EF4444",
+              colorSuccess: "#22C55E",
+              borderRadius: "0.5rem",
+              fontFamily: "var(--font-geist-sans)",
+            },
+            elements: {
+              card: "bg-surface border border-border shadow-2xl",
+              headerTitle: "text-foreground",
+              headerSubtitle: "text-foreground/55",
+              socialButtonsBlockButton:
+                "border-border bg-background/40 text-foreground hover:bg-surface",
+              dividerLine: "bg-border",
+              dividerText: "text-foreground/40",
+              formFieldLabel: "text-foreground/70",
+              formButtonPrimary:
+                "bg-accent hover:bg-accent-light text-white normal-case",
+              footerActionLink: "text-accent-light hover:text-accent",
+              footer: "bg-surface",
+            },
+          }}
+        >
           <PostHogProvider>
             <QuotaProvider>
               <Suspense fallback={null}>
