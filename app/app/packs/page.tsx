@@ -531,7 +531,7 @@ export default function AppPage() {
         </header>
       )}
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         {/* Left: Input Panel */}
         <div className="flex flex-col rounded-2xl border border-border bg-surface p-5">
           <div className="flex-1 space-y-4">
