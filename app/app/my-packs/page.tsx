@@ -141,7 +141,7 @@ export default function MyPacksPage() {
       const r = await fetch("/api/custom-packs");
       if (r.ok) {
         const data = await r.json();
-        const sorted = (data.packs as CustomPack[])
+        const sorted = ((data.packs as CustomPack[]) ?? [])
           .map((p) => {
             // If Worker didn't persist orientation, derive it client-side.
             // Square sizes (W=H) → Square; otherwise default Portrait.
