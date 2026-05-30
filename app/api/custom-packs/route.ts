@@ -81,7 +81,7 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as PackPayload;
     const validation = validatePack(body);
-    if (!validation.ok) {
+    if (validation.ok === false) {
       return Response.json({ error: validation.error }, { status: 400, headers: { "x-request-id": requestId } });
     }
     const r = await workerFetch("/custom-packs", "POST", token, validation.pack, requestId);

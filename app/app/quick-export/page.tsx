@@ -7,6 +7,7 @@ import { UploadZone } from "../components/UploadZone";
 import { GenerateButton } from "../components/GenerateButton";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
+import { PaywallInterstitial } from "../components/PaywallInterstitial";
 import { SizeRequestLink } from "../components/SizeRequestLink";
 import { QuickExportPreviewPanel } from "../components/QuickExportPreviewPanel";
 import {
@@ -606,42 +607,35 @@ export default function QuickExportPage() {
 
           {/* Export button */}
           <div className="space-y-2">
-            <GenerateButton
-              disabled={!state.file || busy || state.globalError === "QUOTA:FREE_QUICK_LIMIT"}
-              loading={busy}
-              onClick={exportSingle}
-              label="Export JPG"
-              loadingLabel="Exporting..."
-            />
-
-            {/* Remaining exports badge (critical threshold only) */}
-            {!busy && !state.globalError && state.remaining && state.remaining.quick <= 2 && (
-              <p className="text-center text-xs font-medium">
-                <span className="gradient-btn inline-block rounded-full px-3 py-1">
-                  {state.remaining.quick} {state.remaining.quick === 1 ? 'export' : 'exports'} remaining today
-                </span>
-              </p>
-            )}
-
             {state.globalError === "QUOTA:FREE_QUICK_LIMIT" ? (
-              <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">You&apos;ve used all your free exports today.</p>
-                <p className="mt-1 text-xs text-foreground/50">
-                  Pro gives you unlimited exports, no watermark, and 7 concurrent jobs — for $11.99/month.
-                </p>
-                <a
-                  href="/app/billing?source=limit&kind=FREE_QUICK_LIMIT"
-                  className="gradient-btn mt-2 inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
-                >
-                  Unlock Pro
-                </a>
-              </div>
-            ) : state.globalError ? (
-              <div className="flex items-start gap-2 rounded-lg border border-error/20 bg-error/5 px-3 py-2">
-                <XCircle size={14} className="mt-0.5 shrink-0 text-error" />
-                <p className="text-xs text-error/90">{state.globalError}</p>
-              </div>
-            ) : null}
+              <PaywallInterstitial kind="FREE_QUICK_LIMIT" />
+            ) : (
+              <>
+                <GenerateButton
+                  disabled={!state.file || busy}
+                  loading={busy}
+                  onClick={exportSingle}
+                  label="Export JPG"
+                  loadingLabel="Exporting..."
+                />
+
+                {/* Remaining exports badge (critical threshold only) */}
+                {!busy && state.remaining && state.remaining.quick <= 2 && (
+                  <p className="text-center text-xs font-medium">
+                    <span className="gradient-btn inline-block rounded-full px-3 py-1">
+                      {state.remaining.quick} {state.remaining.quick === 1 ? 'export' : 'exports'} remaining today
+                    </span>
+                  </p>
+                )}
+
+                {state.globalError && (
+                  <div className="flex items-start gap-2 rounded-lg border border-error/20 bg-error/5 px-3 py-2">
+                    <XCircle size={14} className="mt-0.5 shrink-0 text-error" />
+                    <p className="text-xs text-error/90">{state.globalError}</p>
+                  </div>
+                )}
+              </>
+            )}
 
             {busy && (
               <button

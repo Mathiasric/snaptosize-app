@@ -360,6 +360,10 @@ export default function MyPacksPage() {
         // Daily free quota hit → conversion-focused upsell, not a raw error code
         if (enqRes.status === 402) {
           setGlobalError("QUOTA:FREE_BATCH_LIMIT");
+          posthog?.capture("rate_limit_hit", {
+            kind: "FREE_BATCH_LIMIT",
+            source: "my-packs",
+          });
           posthog?.capture("paywall_view", {
             trigger: "FREE_BATCH_LIMIT",
             plan: "free",

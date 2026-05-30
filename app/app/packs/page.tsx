@@ -14,6 +14,7 @@ import { XCircle, FolderDown, Check, Download, Upload, Layers, X } from "lucide-
 import { useQuota } from "../context/QuotaContext";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
+import { PaywallInterstitial } from "../components/PaywallInterstitial";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -555,21 +556,33 @@ export default function AppPage() {
           </div>
 
           <div className="space-y-2 pt-2">
-            <GenerateButton
-              disabled={!state.file || noneSelected || busy || state.globalError === "QUOTA:FREE_BATCH_LIMIT"}
-              loading={busy}
-              onClick={generate}
-            />
+            {state.globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
+              <PaywallInterstitial kind="FREE_BATCH_LIMIT" />
+            ) : (
+              <>
+                <GenerateButton
+                  disabled={!state.file || noneSelected || busy}
+                  loading={busy}
+                  onClick={generate}
+                />
 
-            {/* Remaining packs badge (critical threshold only) */}
-            {!busy && !state.globalError && state.remaining && state.remaining.batch <= 1 && (
-              <p className="text-center text-xs font-medium">
-                <span className="gradient-btn inline-block rounded-full px-3 py-1">
-                  {state.remaining.batch} {state.remaining.batch === 1 ? 'pack' : 'packs'} remaining today
-                </span>
-              </p>
+                {/* Remaining packs badge (critical threshold only) */}
+                {!busy && state.remaining && state.remaining.batch <= 1 && (
+                  <p className="text-center text-xs font-medium">
+                    <span className="gradient-btn inline-block rounded-full px-3 py-1">
+                      {state.remaining.batch} {state.remaining.batch === 1 ? 'pack' : 'packs'} remaining today
+                    </span>
+                  </p>
+                )}
+
+                {state.globalError && (
+                  <div className="flex items-start gap-2 rounded-lg border border-error/20 bg-error/5 px-3 py-2">
+                    <XCircle size={14} className="mt-0.5 shrink-0 text-error" />
+                    <p className="text-xs text-error/90">{state.globalError}</p>
+                  </div>
+                )}
+              </>
             )}
-
 
             {/* Need A0 / other sizes */}
             <p className="text-center text-xs text-foreground/30">
@@ -578,27 +591,6 @@ export default function AppPage() {
                 Export individually
               </a>
             </p>
-
-            {/* Inline error under generate */}
-            {state.globalError === "QUOTA:FREE_BATCH_LIMIT" ? (
-              <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">You&apos;ve used all your free ZIP packs today.</p>
-                <p className="mt-1 text-xs text-foreground/50">
-                  Pro gives you unlimited exports, no watermark, and 7 concurrent jobs — for $11.99/month.
-                </p>
-                <a
-                  href="/app/billing?source=limit&kind=FREE_BATCH_LIMIT"
-                  className="gradient-btn mt-2 inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
-                >
-                  Unlock Pro
-                </a>
-              </div>
-            ) : state.globalError ? (
-              <div className="flex items-start gap-2 rounded-lg border border-error/20 bg-error/5 px-3 py-2">
-                <XCircle size={14} className="mt-0.5 shrink-0 text-error" />
-                <p className="text-xs text-error/90">{state.globalError}</p>
-              </div>
-            ) : null}
 
             {/* Batch progress */}
             {busy && state.batchProgress && state.batchProgress.total > 1 && (
