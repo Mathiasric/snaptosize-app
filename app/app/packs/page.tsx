@@ -581,16 +581,16 @@ export default function AppPage() {
                     <p className="text-xs text-error/90">{state.globalError}</p>
                   </div>
                 )}
+
+                {/* Need A0 / other sizes */}
+                <p className="text-center text-xs text-foreground/30">
+                  Need A0, 24×36, or 24×32?{" "}
+                  <a href="/app/quick-export" className="text-accent-light hover:underline">
+                    Export individually
+                  </a>
+                </p>
               </>
             )}
-
-            {/* Need A0 / other sizes */}
-            <p className="text-center text-xs text-foreground/30">
-              Need A0, 24×36, or 24×32?{" "}
-              <a href="/app/quick-export" className="text-accent-light hover:underline">
-                Export individually
-              </a>
-            </p>
 
             {/* Batch progress */}
             {busy && state.batchProgress && state.batchProgress.total > 1 && (
