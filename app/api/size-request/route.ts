@@ -42,6 +42,7 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           from: "SnapToSize <support@snaptosize.com>",
           to: "support@snaptosize.com",
+          reply_to: email !== "unknown" ? email : undefined,
           subject: `Size request: ${size.trim()}`,
           text: `User: ${email}\nPlan: ${plan}\nPage: ${page || "unknown"}\n\nRequested size: ${size.trim()}`,
         }),
