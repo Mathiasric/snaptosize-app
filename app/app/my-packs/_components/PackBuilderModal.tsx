@@ -6,10 +6,10 @@ import type { CustomPack } from "./types";
 import { MAX_SIZES_PER_PACK } from "./types";
 import { SIZE_CATALOG, SQUARE_SIZES, type Orientation, type SizeEntry } from "../../lib/size-catalog";
 
-// Sizes excluded from pack mode to prevent runner OOM on the 2GB Fly machine.
+// Sizes excluded from pack mode to prevent runner OOM on the 4GB Fly machine.
 // Mirrors PACK_SIZES exclusions in runner/main.py. Still available for Quick Export
 // (single mode resizes don't hit the same memory pressure).
-const PACK_EXCLUDED_SIZE_IDS = new Set<string>(["24x36", "24x32", "A0"]);
+const PACK_EXCLUDED_SIZE_IDS = new Set<string>(["24x32", "A0"]);
 
 interface Props {
   initial?: CustomPack;
