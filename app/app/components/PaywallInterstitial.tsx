@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 interface PaywallInterstitialProps {
   kind: "FREE_BATCH_LIMIT" | "FREE_QUICK_LIMIT";
@@ -22,6 +23,11 @@ const COPY = {
 export function PaywallInterstitial({ kind }: PaywallInterstitialProps) {
   const { headline, body, cta } = COPY[kind];
   const href = `/app/billing?source=limit&kind=${kind}`;
+  const posthog = usePostHog();
+
+  function handleCtaClick() {
+    posthog?.capture("paywall_cta_clicked", { kind, source: "interstitial" });
+  }
 
   return (
     <div className="rounded-xl border border-accent/40 bg-accent/5 px-5 py-5">
@@ -35,6 +41,7 @@ export function PaywallInterstitial({ kind }: PaywallInterstitialProps) {
           <div className="mt-4 flex items-center gap-3">
             <a
               href={href}
+              onClick={handleCtaClick}
               className="gradient-btn inline-block rounded-lg px-5 py-2 text-sm font-semibold text-white"
             >
               {cta} →
