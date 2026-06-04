@@ -9,14 +9,14 @@ interface PaywallInterstitialProps {
 
 const COPY = {
   FREE_BATCH_LIMIT: {
-    headline: "You've used your 2 free ZIP packs for today.",
-    body: "Etsy sellers on Pro never stop mid-listing. Unlimited exports, no watermark, every size — keep going now.",
-    cta: "Continue with Pro",
+    headline: "You've used both free ZIP packs for today.",
+    body: "Go Pro for $11.99/mo — unlimited ZIP packs, no watermark, every ratio your buyers need.",
+    cta: "Go Pro — $11.99/mo",
   },
   FREE_QUICK_LIMIT: {
-    headline: "You've used your 5 free exports for today.",
-    body: "Pro sellers export as many files as their listings need. Unlimited exports, no watermark, no reset panic.",
-    cta: "Continue with Pro",
+    headline: "You've used all 5 free exports for today.",
+    body: "Go Pro for $11.99/mo — unlimited exports, no watermark, no daily cutoff.",
+    cta: "Go Pro — $11.99/mo",
   },
 } as const;
 
@@ -46,7 +46,7 @@ export function PaywallInterstitial({ kind }: PaywallInterstitialProps) {
             >
               {cta} →
             </a>
-            <span className="text-xs text-foreground/30">Resets at midnight</span>
+            <span className="text-xs text-foreground/30">or come back tomorrow</span>
           </div>
         </div>
       </div>

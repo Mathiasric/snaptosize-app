@@ -29,7 +29,7 @@ export function UpsellBanner({ mode }: UpsellBannerProps) {
   const message =
     mode === "packs"
       ? "That took 30 seconds."
-      : "Your print-ready file is ready.";
+      : "That's watermarked. Pro isn't.";
 
   return (
     <div className="relative rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
@@ -49,13 +49,13 @@ export function UpsellBanner({ mode }: UpsellBannerProps) {
             {message}
           </p>
           <p className="mt-0.5 text-xs text-foreground/50">
-            Your Etsy listing won&apos;t show the watermark with Pro — download files you can actually sell with.
+            Free exports include a SnapToSize watermark. Go Pro ($11.99/mo) for clean, sell-ready files.
           </p>
           <Link
             href="/app/billing?source=post_export"
             className="gradient-btn mt-2 inline-block rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
           >
-            Unlock Pro
+            Remove the watermark →
           </Link>
         </div>
       </div>
