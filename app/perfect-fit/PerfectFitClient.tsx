@@ -9,6 +9,15 @@ import CropCanvas from '../crop-preview/components/CropCanvas'
 
 type Phase = 'idle' | 'uploading' | 'queued' | 'running' | 'done' | 'error'
 
+const PHASE_LABEL: Record<Phase, string> = {
+  idle: '',
+  uploading: 'Uploading your image…',
+  queued: 'Queued…',
+  running: 'Cropping every print size…',
+  done: 'Done — your download started.',
+  error: '',
+}
+
 export default function PerfectFitClient() {
   const { user } = useUser()
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === 'pro'
@@ -149,8 +158,19 @@ export default function PerfectFitClient() {
               className="rounded-lg border border-white/20 px-4 py-2 text-white/80 hover:border-white/40">
               New image
             </button>
-            {phase === 'done' && <span className="text-sm text-[#2DD4BF]">Done — download started.</span>}
           </div>
+
+          {(busy || phase === 'done') && (
+            <div className="flex items-center gap-2 text-sm" role="status" aria-live="polite">
+              {busy && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-[#2DD4BF]" />
+              )}
+              <span className={phase === 'done' ? 'text-[#2DD4BF]' : 'text-white/70'}>
+                {phase === 'done' ? '✓ ' : ''}
+                {PHASE_LABEL[phase]}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
