@@ -55,23 +55,31 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.fill()
   }, [image, ratio, focal])
 
-  function setFocalFromEvent(e: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width
-    const y = (e.clientY - rect.top) / rect.height
-    onFocalChange({ x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) })
-  }
+  // Relative drag: grab anywhere and slide the crop to frame the subject —
+  // smoother + more precise than jump-to-click. Aspect-agnostic.
+  const dragRef = useRef<{ px: number; py: number; fx: number; fy: number } | null>(null)
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     e.currentTarget.setPointerCapture(e.pointerId)
-    setFocalFromEvent(e)
+    dragRef.current = { px: e.clientX, py: e.clientY, fx: focal.x, fy: focal.y }
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (e.buttons !== 1) return // only while primary button/touch held
-    setFocalFromEvent(e)
+    const start = dragRef.current
+    if (!start || e.buttons !== 1) return // only while primary button/touch held
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const dx = (e.clientX - start.px) / rect.width
+    const dy = (e.clientY - start.py) / rect.height
+    onFocalChange({
+      x: Math.min(1, Math.max(0, start.fx + dx)),
+      y: Math.min(1, Math.max(0, start.fy + dy)),
+    })
+  }
+
+  function handlePointerUp() {
+    dragRef.current = null
   }
 
   return (
@@ -79,7 +87,9 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
       ref={canvasRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      className="cursor-crosshair touch-none rounded-lg border border-white/10"
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className="cursor-grab touch-none rounded-lg border border-white/10 active:cursor-grabbing"
     />
   )
 }
