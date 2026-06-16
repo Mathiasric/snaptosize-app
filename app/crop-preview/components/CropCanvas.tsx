@@ -55,7 +55,7 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.fill()
   }, [image, ratio, focal])
 
-  function handleClick(e: React.MouseEvent<HTMLCanvasElement>) {
+  function setFocalFromEvent(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
@@ -64,11 +64,22 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     onFocalChange({ x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) })
   }
 
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setFocalFromEvent(e)
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (e.buttons !== 1) return // only while primary button/touch held
+    setFocalFromEvent(e)
+  }
+
   return (
     <canvas
       ref={canvasRef}
-      onClick={handleClick}
-      className="cursor-crosshair rounded-lg border border-white/10"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      className="cursor-crosshair touch-none rounded-lg border border-white/10"
     />
   )
 }
