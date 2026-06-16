@@ -59,7 +59,7 @@ export function Header() {
     <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-3">
       <Link href="/" className="flex items-center gap-2.5">
         <Image
-          src="/favicon-96x96.png"
+          src="/logo-96.png"
           alt="SnapToSize"
           width={28}
           height={28}
