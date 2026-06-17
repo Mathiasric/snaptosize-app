@@ -12,7 +12,7 @@ type Props = {
   onSelect: (id: string) => void
 }
 
-const THUMB = 88 // px longest edge of each thumbnail
+const THUMB = 56 // px longest edge of each thumbnail
 
 function Thumb({ image, focal, ratio }: { image: HTMLImageElement; focal: Focal; ratio: Ratio }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -26,24 +26,39 @@ function Thumb({ image, focal, ratio }: { image: HTMLImageElement; focal: Focal;
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(image, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height)
   }, [image, focal, ratio])
-  return <canvas ref={ref} className="rounded" />
+  return <canvas ref={ref} className="rounded-[3px]" />
 }
 
 export default function RatioStrip({ image, focal, ratios, selectedId, onSelect }: Props) {
   return (
-    <div className="flex flex-wrap gap-3">
-      {ratios.map((r) => (
-        <button
-          key={r.id}
-          onClick={() => onSelect(r.id)}
-          className={`flex flex-col items-center gap-1 rounded-lg p-2 transition ${
-            selectedId === r.id ? 'ring-2 ring-[#2DD4BF]' : 'ring-1 ring-white/10 hover:ring-white/30'
-          }`}
-        >
-          <Thumb image={image} focal={focal} ratio={r} />
-          <span className="text-xs text-white/80">{r.label}</span>
-        </button>
-      ))}
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+      {ratios.map((r) => {
+        const selected = selectedId === r.id
+        return (
+          <button
+            key={r.id}
+            onClick={() => onSelect(r.id)}
+            aria-pressed={selected}
+            className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${
+              selected
+                ? 'border-accent bg-accent/[0.08] glow-purple'
+                : 'border-border bg-background/30 hover:border-foreground/20 hover:bg-background/50'
+            }`}
+          >
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center">
+              <Thumb image={image} focal={focal} ratio={r} />
+            </div>
+            <div className="min-w-0">
+              <div className={`text-sm font-semibold ${selected ? 'text-foreground' : 'text-foreground/80'}`}>
+                {r.label}
+              </div>
+              <div className={`text-xs ${selected ? 'text-accent-light' : 'text-foreground/40'}`}>
+                {selected ? 'Selected' : 'Preview fit'}
+              </div>
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }

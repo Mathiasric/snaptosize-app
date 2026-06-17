@@ -2,10 +2,12 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { Check, Loader, UploadCloud } from 'lucide-react'
 import { PF_RATIOS, type PFRatio } from './lib/ratios'
 import { type Focal } from '../crop-preview/lib/crop'
 import { detectFocal } from '../crop-preview/lib/autoFocal'
 import CropCanvas from '../crop-preview/components/CropCanvas'
+import RatioStrip from '../crop-preview/components/RatioStrip'
 
 type Phase = 'idle' | 'uploading' | 'queued' | 'running' | 'done' | 'error'
 
@@ -39,6 +41,11 @@ export default function PerfectFitClient() {
     img.onerror = () => setMessage('Could not load that image.')
     img.src = URL.createObjectURL(f)
   }, [])
+
+  function reset() {
+    abortRef.current?.abort()
+    setImage(null); setFile(null); setPhase('idle'); setMessage(null)
+  }
 
   async function pollUntilDone(jobId: string, signal: AbortSignal) {
     const deadline = Date.now() + 5 * 60 * 1000
@@ -96,7 +103,7 @@ export default function PerfectFitClient() {
       })
       if (enq.status === 402 || enq.status === 429) {
         const q = await enq.json().catch(() => ({}))
-        throw new Error(q.message || 'Daily limit reached — upgrade to Pro for unlimited.')
+        throw new Error(q.message || 'Daily free limit reached. Go Pro for unlimited exports.')
       }
       if (!enq.ok) throw new Error('Could not start export')
       const jobId = (await enq.json())?.job_id as string | undefined
@@ -117,64 +124,100 @@ export default function PerfectFitClient() {
   const busy = phase === 'uploading' || phase === 'queued' || phase === 'running'
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12 text-white">
-      <h1 className="text-2xl font-semibold">Perfect Fit</h1>
-      <p className="mt-1 text-sm text-white/60">
-        Frame your subject and crop it to every Etsy print size. Drag the image to position the crop.
-        {!isPro && <span className="text-amber-300"> Free exports are watermarked.</span>}
-      </p>
+    <div className="mx-auto max-w-[1100px] px-4 py-8 sm:py-10">
+      <header className="mb-7">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Perfect Fit</h1>
+        <p className="mt-1.5 max-w-xl text-sm text-foreground/50">
+          Frame your subject and crop it to every Etsy print size.
+        </p>
+      </header>
 
       {!image && (
         <label
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) loadFile(f) }}
-          className="mt-8 flex h-56 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-white/20 text-white/60 hover:border-[#2DD4BF]/60"
+          className="flex h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-colors hover:border-accent/40"
+          style={{ background: 'radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)' }}
         >
-          Drop an image or click to upload
-          <input type="file" accept="image/*" className="hidden"
-            onChange={(e) => e.target.files?.[0] && loadFile(e.target.files[0])} />
+          <UploadCloud className="h-7 w-7 text-foreground/40" />
+          <div>
+            <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
+            <div className="mt-1 text-xs text-foreground/40">See it fit to every size before you export</div>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && loadFile(e.target.files[0])}
+          />
         </label>
       )}
 
+      {!image && message && <p className="mt-3 text-sm text-error">{message}</p>}
+
       {image && (
-        <div className="mt-8 space-y-6">
-          <CropCanvas image={image} ratio={ratio} focal={focal} onFocalChange={setFocal} />
-          <div className="flex flex-wrap gap-2">
-            {PF_RATIOS.map((r) => (
-              <button key={r.id} onClick={() => setRatio(r)}
-                className={`rounded-lg px-3 py-2 text-sm transition ${
-                  ratio.id === r.id ? 'bg-[#2DD4BF] text-black' : 'ring-1 ring-white/15 text-white/80 hover:ring-white/40'
-                }`}>
-                {r.label}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+          {/* Workspace */}
+          <div className="space-y-4">
+            <CropCanvas image={image} ratio={ratio} focal={focal} onFocalChange={setFocal} />
+
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={handleExport}
+                disabled={busy}
+                className={`gradient-btn inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                  busy ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-lg hover:shadow-accent/20'
+                }`}
+              >
+                {busy ? 'Working…' : `Export ${ratio.label} pack`}
               </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleExport} disabled={busy}
-              className="rounded-lg bg-[#2DD4BF] px-4 py-2 font-medium text-black hover:opacity-90 disabled:opacity-50">
-              {busy ? 'Exporting…' : `Export ${ratio.label} pack`}
-            </button>
-            <button onClick={() => { abortRef.current?.abort(); setImage(null); setFile(null); setPhase('idle'); setMessage(null) }}
-              className="rounded-lg border border-white/20 px-4 py-2 text-white/80 hover:border-white/40">
-              New image
-            </button>
+              <button onClick={reset} className="text-sm text-foreground/50 transition-colors hover:text-foreground">
+                New image
+              </button>
+            </div>
+
+            {(busy || phase === 'done') && (
+              <div className="flex items-center gap-2 text-sm" role="status" aria-live="polite">
+                {busy && <Loader size={14} className="animate-spin text-accent-light" />}
+                {phase === 'done' && <Check size={14} className="text-success" />}
+                <span className={phase === 'done' ? 'text-success' : 'text-foreground/70'}>{PHASE_LABEL[phase]}</span>
+              </div>
+            )}
+
+            {phase === 'error' && message && <p className="text-sm text-error">{message}</p>}
+
+            {!isPro && (
+              <div className="rounded-xl border border-accent/20 bg-accent/[0.05] p-4">
+                <div className="text-sm font-medium text-foreground/90">That&apos;s watermarked. Pro isn&apos;t.</div>
+                <p className="mt-0.5 text-xs text-foreground/50">
+                  Free exports include a SnapToSize watermark. Go Pro for clean, sell-ready files.
+                </p>
+                <a
+                  href="/app/billing?source=perfect-fit"
+                  className="gradient-btn mt-2.5 inline-flex rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
+                >
+                  Remove the watermark →
+                </a>
+              </div>
+            )}
           </div>
 
-          {(busy || phase === 'done') && (
-            <div className="flex items-center gap-2 text-sm" role="status" aria-live="polite">
-              {busy && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-[#2DD4BF]" />
-              )}
-              <span className={phase === 'done' ? 'text-[#2DD4BF]' : 'text-white/70'}>
-                {phase === 'done' ? '✓ ' : ''}
-                {PHASE_LABEL[phase]}
-              </span>
-            </div>
-          )}
+          {/* All-ratios rail — the value made visible */}
+          <aside className="space-y-2.5">
+            <div className="text-xs font-medium uppercase tracking-wide text-foreground/40">Your art · every size</div>
+            <RatioStrip
+              image={image}
+              focal={focal}
+              ratios={PF_RATIOS}
+              selectedId={ratio.id}
+              onSelect={(id) => setRatio(PF_RATIOS.find((r) => r.id === id) ?? PF_RATIOS[0])}
+            />
+            <p className="pt-1 text-xs leading-relaxed text-foreground/35">
+              Each export is a full pack of print sizes for that ratio, framed around your subject.
+            </p>
+          </aside>
         </div>
       )}
-
-      {message && <p className="mt-4 text-sm text-red-400">{message}</p>}
     </div>
   )
 }

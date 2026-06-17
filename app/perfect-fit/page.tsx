@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PerfectFitPage() {
   return (
-    <main className="min-h-screen bg-neutral-950">
+    <main className="min-h-screen bg-background">
       <PerfectFitClient />
     </main>
   )
