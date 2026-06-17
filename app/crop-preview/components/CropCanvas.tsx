@@ -43,16 +43,11 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.fillRect(0, by, bx, bh)
     ctx.fillRect(bx + bw, by, dispW - (bx + bw), bh)
 
-    // crop border (teal — conversion color)
+    // crop border (teal — conversion color). The box itself is the feedback;
+    // no focal dot (vestigial now that you drag the crop directly).
     ctx.strokeStyle = '#2DD4BF'
     ctx.lineWidth = 2
     ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2)
-
-    // focal marker
-    ctx.fillStyle = '#2DD4BF'
-    ctx.beginPath()
-    ctx.arc(focal.x * dispW, focal.y * dispH, 5, 0, Math.PI * 2)
-    ctx.fill()
   }, [image, ratio, focal])
 
   // Relative drag: grab anywhere and slide the crop to frame the subject —

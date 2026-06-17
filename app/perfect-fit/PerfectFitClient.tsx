@@ -11,10 +11,10 @@ type Phase = 'idle' | 'uploading' | 'queued' | 'running' | 'done' | 'error'
 
 const PHASE_LABEL: Record<Phase, string> = {
   idle: '',
-  uploading: 'Uploading your image…',
+  uploading: 'Reading your artwork…',
   queued: 'Queued…',
-  running: 'Cropping every print size…',
-  done: 'Done — your download started.',
+  running: 'Tailoring every print size…',
+  done: 'Your print-ready pack is downloading',
   error: '',
 }
 
@@ -120,7 +120,7 @@ export default function PerfectFitClient() {
     <div className="mx-auto max-w-3xl px-6 py-12 text-white">
       <h1 className="text-2xl font-semibold">Perfect Fit</h1>
       <p className="mt-1 text-sm text-white/60">
-        Crop to every print size around your subject — no stretching. Drag the image to set the focal point.
+        Frame your subject and crop it to every Etsy print size. Drag the image to position the crop.
         {!isPro && <span className="text-amber-300"> Free exports are watermarked.</span>}
       </p>
 
