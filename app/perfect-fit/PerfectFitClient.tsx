@@ -133,27 +133,34 @@ export default function PerfectFitClient() {
       </header>
 
       {!image && (
-        <label
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) loadFile(f) }}
-          className="flex h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-colors hover:border-accent/40"
-          style={{ background: 'radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)' }}
-        >
-          <UploadCloud className="h-7 w-7 text-foreground/40" />
-          <div>
-            <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
-            <div className="mt-1 text-xs text-foreground/40">See it fit to every size before you export</div>
-          </div>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && loadFile(e.target.files[0])}
-          />
-        </label>
+        <div className="mx-auto max-w-2xl">
+          <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) loadFile(f) }}
+            className="flex h-60 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-colors hover:border-accent/40"
+            style={{ background: 'radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)' }}
+          >
+            <UploadCloud className="h-7 w-7 text-foreground/40" />
+            <div>
+              <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
+              <div className="mt-1 text-xs text-foreground/40">See it fit to every size before you export</div>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && loadFile(e.target.files[0])}
+            />
+          </label>
+          {message ? (
+            <p className="mt-3 text-center text-sm text-error">{message}</p>
+          ) : (
+            <p className="mt-3 text-center text-xs text-foreground/35">
+              2:3, 3:4, 4:5 and A sizes, each framed around your subject.
+            </p>
+          )}
+        </div>
       )}
-
-      {!image && message && <p className="mt-3 text-sm text-error">{message}</p>}
 
       {image && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
