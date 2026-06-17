@@ -1,4 +1,4 @@
-export type Ratio = { id: string; label: string; w: number; h: number }
+export type Ratio = { id: string; label: string; w: number; h: number; members?: { w: number; h: number }[] }
 
 // Standard Etsy print ratios (aspect only; Phase 1 is pixel-domain).
 export const RATIOS: Ratio[] = [

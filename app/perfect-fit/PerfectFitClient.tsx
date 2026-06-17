@@ -247,7 +247,7 @@ export default function PerfectFitClient() {
               onSelect={(id) => setRatio(PF_RATIOS.find((r) => r.id === id) ?? PF_RATIOS[0])}
             />
             <p className="pt-1 text-xs leading-relaxed text-foreground/35">
-              Each export is a full pack of print sizes for that ratio, framed around your subject.
+              Each export is a full pack of print sizes, framed around your subject.
             </p>
           </aside>
         </div>
