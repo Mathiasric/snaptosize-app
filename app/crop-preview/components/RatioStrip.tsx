@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { boxFor, tightestDims, type Focal } from '../lib/crop'
+import { boxFor, type Focal } from '../lib/crop'
 import type { Ratio } from '../lib/ratios'
 
 type Props = {
@@ -19,10 +19,7 @@ function Thumb({ image, focal, ratio }: { image: HTMLImageElement; focal: Focal;
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const dims = ratio.members?.length
-      ? tightestDims(ratio.members, focal, image.naturalWidth, image.naturalHeight)
-      : ratio
-    const box = boxFor(dims.w, dims.h, focal, image.naturalWidth, image.naturalHeight)
+    const box = boxFor(ratio.w, ratio.h, focal, image.naturalWidth, image.naturalHeight)
     const scale = THUMB / Math.max(box.width, box.height)
     canvas.width = Math.round(box.width * scale)
     canvas.height = Math.round(box.height * scale)

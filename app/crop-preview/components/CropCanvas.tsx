@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Move } from 'lucide-react'
-import { boxFor, tightestDims, type Focal } from '../lib/crop'
+import { boxFor, type Focal } from '../lib/crop'
 import type { Ratio as RatioDef } from '../lib/ratios'
 
 type Props = {
@@ -32,9 +32,9 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.clearRect(0, 0, dispW, dispH)
     ctx.drawImage(image, 0, 0, dispW, dispH)
 
-    // dim outside the crop box. For a multi-aspect pack, preview the tightest crop.
-    const dims = ratio.members?.length ? tightestDims(ratio.members, focal, srcW, srcH) : ratio
-    const box = boxFor(dims.w, dims.h, focal, srcW, srcH)
+    // dim outside the crop box. Multi-aspect packs (Common sizes) preview their
+    // representative aspect (11x14) — a gentle, common crop, not the worst case.
+    const box = boxFor(ratio.w, ratio.h, focal, srcW, srcH)
     const bx = box.x * scale
     const by = box.y * scale
     const bw = box.width * scale
