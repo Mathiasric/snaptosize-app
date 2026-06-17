@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Move } from 'lucide-react'
 import { boxFor, type Focal } from '../lib/crop'
 import type { Ratio as RatioDef } from '../lib/ratios'
 
@@ -53,9 +54,12 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
   // Relative drag: grab anywhere and slide the crop to frame the subject —
   // smoother + more precise than jump-to-click. Aspect-agnostic.
   const dragRef = useRef<{ px: number; py: number; fx: number; fy: number } | null>(null)
+  // Discoverability cue — hide it once the user has dragged at least once.
+  const [hinted, setHinted] = useState(false)
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     e.currentTarget.setPointerCapture(e.pointerId)
+    setHinted(true)
     dragRef.current = { px: e.clientX, py: e.clientY, fx: focal.x, fy: focal.y }
   }
 
@@ -78,13 +82,25 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
   }
 
   return (
-    <canvas
-      ref={canvasRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      className="cursor-grab touch-none rounded-lg border border-white/10 active:cursor-grabbing"
-    />
+    <div className="relative inline-block">
+      <canvas
+        ref={canvasRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        className="cursor-grab touch-none rounded-lg border border-white/10 active:cursor-grabbing"
+      />
+      <div
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+          hinted ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
+        <span className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm">
+          <Move className="h-3.5 w-3.5" />
+          Drag to reposition
+        </span>
+      </div>
+    </div>
   )
 }
