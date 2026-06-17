@@ -89,7 +89,7 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="cursor-grab touch-none rounded-lg border border-white/10 active:cursor-grabbing"
+        className="h-auto max-h-[440px] w-auto max-w-full cursor-grab touch-none rounded-lg border border-white/10 active:cursor-grabbing"
       />
       <div
         className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
