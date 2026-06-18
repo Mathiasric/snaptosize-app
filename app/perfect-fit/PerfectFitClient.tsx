@@ -226,12 +226,16 @@ export default function PerfectFitClient() {
               <div className="text-xs font-medium uppercase tracking-wide text-foreground/55">What you&apos;ll get</div>
               <div className="mt-4 flex flex-wrap items-end gap-2.5">
                 {PF_RATIOS.map((r) => {
-                  const long = 58
+                  const long = 64
                   const w = r.w >= r.h ? long : Math.round(long * (r.w / r.h))
                   const h = r.h >= r.w ? long : Math.round(long * (r.h / r.w))
                   return (
                     <div key={r.id} className="flex flex-col items-center gap-1.5">
-                      <div className="rounded-md border border-foreground/20 bg-foreground/[0.08]" style={{ width: w, height: h }} />
+                      <div className="overflow-hidden rounded-md border border-foreground/20" style={{ width: w, height: h }}>
+                        {/* Same sample art cropped to every ratio — shows "one upload, every size". */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/perfect-fit-sample.jpg" alt="" className="h-full w-full object-cover" />
+                      </div>
                       <span className="text-[10px] text-foreground/55">{r.label}</span>
                     </div>
                   )
