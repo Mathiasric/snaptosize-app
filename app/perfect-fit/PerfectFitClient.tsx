@@ -187,7 +187,7 @@ export default function PerfectFitClient() {
       <header className="mb-7">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Perfect Fit</h1>
         <p className="mt-1.5 max-w-xl text-sm text-foreground/50">
-          One artwork, framed and cropped to every Etsy print size.
+          One artwork, framed to every Etsy print size.
         </p>
       </header>
 
@@ -277,7 +277,7 @@ export default function PerfectFitClient() {
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
                   <div
-                    className={`h-full rounded-full transition-[width] duration-500 ease-out ${phase === 'done' ? 'bg-success' : 'bg-accent'}`}
+                    className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${phase === 'done' ? 'bg-success' : 'bg-accent'}`}
                     style={{ width: `${progress}%` }}
                   />
                 </div>

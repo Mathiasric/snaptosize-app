@@ -39,7 +39,7 @@ export default function RatioStrip({ image, focal, ratios, selectedId, onSelect 
             key={r.id}
             onClick={() => onSelect(r.id)}
             aria-pressed={selected}
-            className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${
+            className={`flex items-center gap-3 rounded-xl border p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50 ${
               selected
                 ? 'border-accent bg-accent/[0.08] glow-purple'
                 : 'border-border bg-background/30 hover:border-foreground/20 hover:bg-background/50'

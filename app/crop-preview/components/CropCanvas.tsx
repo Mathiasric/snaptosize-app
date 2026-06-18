@@ -45,11 +45,14 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.fillRect(0, by, bx, bh)
     ctx.fillRect(bx + bw, by, dispW - (bx + bw), bh)
 
-    // crop border (teal — conversion color). The box itself is the feedback;
-    // no focal dot (vestigial now that you drag the crop directly).
-    ctx.strokeStyle = '#2DD4BF'
+    // Crop outline: neutral white with a soft dark halo so it stays legible over
+    // any artwork. Not a brand color — the rail's purple owns UI selection.
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'
     ctx.lineWidth = 2
+    ctx.shadowColor = 'rgba(0,0,0,0.55)'
+    ctx.shadowBlur = 3
     ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2)
+    ctx.shadowBlur = 0
   }, [image, ratio, focal])
 
   // Relative drag: grab anywhere and slide the crop to frame the subject —
