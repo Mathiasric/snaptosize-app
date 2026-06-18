@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { usePostHog } from 'posthog-js/react'
-import { BadgeCheck, Check, Crop, Layers, Loader, UploadCloud } from 'lucide-react'
+import { BadgeCheck, Check, Crop, Layers, UploadCloud } from 'lucide-react'
 import { PF_RATIOS, type PFRatio } from './lib/ratios'
 import { type Focal } from '../crop-preview/lib/crop'
 import { detectFocal } from '../crop-preview/lib/autoFocal'
@@ -32,6 +32,7 @@ export default function PerfectFitClient() {
   const [ratio, setRatio] = useState<PFRatio>(PF_RATIOS[0])
   const [phase, setPhase] = useState<Phase>('idle')
   const [message, setMessage] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
   // Track whether the seller dragged the crop (vs. trusting auto-focal) — UX signal.
   const focalAdjustedRef = useRef(false)
@@ -61,6 +62,20 @@ export default function PerfectFitClient() {
     focalAdjustedRef.current = true
     setFocal(f)
   }
+
+  // Phase-driven progress. No real per-size progress without a backend change, so this
+  // advances by stage plus a gentle creep during render (typical job ~9s), then completes.
+  useEffect(() => {
+    if (phase === 'uploading') { setProgress(20); return }
+    if (phase === 'queued') { setProgress(45); return }
+    if (phase === 'done') { setProgress(100); return }
+    if (phase === 'running') {
+      setProgress((p) => Math.max(p, 70))
+      const id = setInterval(() => setProgress((p) => (p < 92 ? p + 1.5 : p)), 400)
+      return () => clearInterval(id)
+    }
+    setProgress(0) // idle / error
+  }, [phase])
 
   async function pollUntilDone(jobId: string, signal: AbortSignal) {
     const deadline = Date.now() + 5 * 60 * 1000
@@ -255,10 +270,17 @@ export default function PerfectFitClient() {
             </p>
 
             {(busy || phase === 'done') && (
-              <div className="flex items-center gap-2 text-sm" role="status" aria-live="polite">
-                {busy && <Loader size={14} className="animate-spin text-accent-light" />}
-                {phase === 'done' && <Check size={14} className="text-success" />}
-                <span className={phase === 'done' ? 'text-success' : 'text-foreground/70'}>{PHASE_LABEL[phase]}</span>
+              <div role="status" aria-live="polite" className="max-w-xs space-y-1.5">
+                <div className="flex items-center gap-2 text-sm">
+                  {phase === 'done' && <Check size={14} className="text-success" />}
+                  <span className={phase === 'done' ? 'text-success' : 'text-foreground/70'}>{PHASE_LABEL[phase]}</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-500 ease-out ${phase === 'done' ? 'bg-success' : 'bg-accent'}`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
             )}
 
