@@ -209,7 +209,7 @@ export default function PerfectFitClient() {
                 <UploadCloud className="h-7 w-7 text-foreground/40" />
                 <div>
                   <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
-                  <div className="mt-1 text-xs text-foreground/40">JPG or PNG · see it framed to every size before you export</div>
+                  <div className="mt-1 text-xs text-foreground/40">JPG, PNG, or WEBP · see it framed to every size before you export</div>
                 </div>
                 <input
                   type="file"
@@ -237,14 +237,21 @@ export default function PerfectFitClient() {
                   )
                 })}
               </div>
-              <p className="mt-4 max-w-xs text-xs leading-relaxed text-foreground/45">
-                One upload, framed to every common Etsy ratio — portrait or landscape, each ZIP under Etsy&apos;s 20MB.
+              <div className="mt-3.5 flex items-center gap-2 text-[11px] text-foreground/45">
+                <span className="flex items-end gap-1" aria-hidden="true">
+                  <span className="block rounded-[2px] border border-foreground/30" style={{ width: 10, height: 14 }} />
+                  <span className="block rounded-[2px] border border-foreground/30" style={{ width: 14, height: 10 }} />
+                </span>
+                Portrait or landscape
+              </div>
+              <p className="mt-3 max-w-xs text-xs leading-relaxed text-foreground/45">
+                One upload, framed to every common Etsy ratio — each ZIP under Etsy&apos;s 20MB.
               </p>
             </div>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-foreground/45">
-            <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size, portrait or landscape</span>
+            <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size</span>
             <span className="flex items-center gap-1.5"><Crop size={14} className="text-accent-light" /> Framed around your subject</span>
             <span className="flex items-center gap-1.5"><BadgeCheck size={14} className="text-accent-light" /> 300 DPI, print-ready</span>
           </div>
