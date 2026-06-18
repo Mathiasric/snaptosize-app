@@ -55,7 +55,7 @@ export default function RatioStrip({ image, focal, ratios, selectedId, onSelect,
               <div className={`text-sm font-semibold ${selected ? 'text-foreground' : 'text-foreground/80'}`}>
                 {r.label}
               </div>
-              <div className={`text-xs ${selected ? 'text-accent-light' : 'text-foreground/40'}`}>
+              <div className={`text-xs ${selected ? 'text-accent-light' : 'text-foreground/55'}`}>
                 {selected ? 'Selected' : 'Preview fit'}
               </div>
             </div>

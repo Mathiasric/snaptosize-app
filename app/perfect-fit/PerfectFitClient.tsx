@@ -206,10 +206,10 @@ export default function PerfectFitClient() {
                 className="flex min-h-[15rem] w-full flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-colors hover:border-accent/40"
                 style={{ background: 'radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)' }}
               >
-                <UploadCloud className="h-7 w-7 text-foreground/40" />
+                <UploadCloud className="h-7 w-7 text-foreground/55" />
                 <div>
                   <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
-                  <div className="mt-1 text-xs text-foreground/40">JPG, PNG, or WEBP · see it framed to every size before you export</div>
+                  <div className="mt-1 text-xs text-foreground/55">JPG, PNG, or WEBP · see it framed to every size before you export</div>
                 </div>
                 <input
                   type="file"
@@ -223,7 +223,7 @@ export default function PerfectFitClient() {
 
             {/* What you'll get — a mix of portrait and landscape so both read at a glance */}
             <div className="hidden lg:flex lg:flex-col lg:justify-center">
-              <div className="text-xs font-medium uppercase tracking-wide text-foreground/40">What you&apos;ll get</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-foreground/55">What you&apos;ll get</div>
               <div className="mt-4 flex flex-wrap items-end gap-2.5">
                 {PF_RATIOS.map((r) => {
                   const long = 58
@@ -231,26 +231,26 @@ export default function PerfectFitClient() {
                   const h = r.h >= r.w ? long : Math.round(long * (r.h / r.w))
                   return (
                     <div key={r.id} className="flex flex-col items-center gap-1.5">
-                      <div className="rounded-md border border-foreground/20 bg-foreground/[0.03]" style={{ width: w, height: h }} />
-                      <span className="text-[10px] text-foreground/40">{r.label}</span>
+                      <div className="rounded-md border border-foreground/20 bg-foreground/[0.08]" style={{ width: w, height: h }} />
+                      <span className="text-[10px] text-foreground/55">{r.label}</span>
                     </div>
                   )
                 })}
               </div>
-              <div className="mt-3.5 flex items-center gap-2 text-[11px] text-foreground/45">
+              <div className="mt-3.5 flex items-center gap-2 text-[11px] text-foreground/55">
                 <span className="flex items-end gap-1" aria-hidden="true">
                   <span className="block rounded-[2px] border border-foreground/30" style={{ width: 10, height: 14 }} />
                   <span className="block rounded-[2px] border border-foreground/30" style={{ width: 14, height: 10 }} />
                 </span>
                 Portrait or landscape
               </div>
-              <p className="mt-3 max-w-xs text-xs leading-relaxed text-foreground/45">
+              <p className="mt-3 max-w-xs text-xs leading-relaxed text-foreground/55">
                 One upload, framed to every common Etsy ratio — each ZIP under Etsy&apos;s 20MB.
               </p>
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-foreground/45">
+          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-foreground/55">
             <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size, portrait or landscape</span>
             <span className="flex items-center gap-1.5"><Crop size={14} className="text-accent-light" /> Framed around your subject</span>
             <span className="flex items-center gap-1.5"><BadgeCheck size={14} className="text-accent-light" /> 300 DPI, print-ready</span>
@@ -268,7 +268,7 @@ export default function PerfectFitClient() {
                   key={o}
                   onClick={() => setOrientation(o)}
                   aria-pressed={orientation === o}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                  className={`rounded-md px-3.5 py-2.5 text-xs font-medium capitalize outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50 ${
                     orientation === o ? 'bg-accent/15 text-accent-light' : 'text-foreground/50 hover:text-foreground/80'
                   }`}
                 >
@@ -288,12 +288,12 @@ export default function PerfectFitClient() {
               >
                 {busy ? 'Working…' : `Export ${ratio.label} pack`}
               </button>
-              <button onClick={reset} className="text-sm text-foreground/50 transition-colors hover:text-foreground">
+              <button onClick={reset} className="rounded-lg px-3 py-2 text-sm text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground">
                 New image
               </button>
             </div>
 
-            <p className="text-xs text-foreground/40">
+            <p className="text-xs text-foreground/55">
               {ratio.count} print sizes · 300 DPI · exact Etsy dimensions
             </p>
 
@@ -322,7 +322,7 @@ export default function PerfectFitClient() {
                 </p>
                 <a
                   href="/app/billing?source=perfect-fit"
-                  className="gradient-btn mt-2.5 inline-flex rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
+                  className="gradient-btn mt-2.5 inline-flex rounded-lg px-4 py-2.5 text-xs font-semibold text-white"
                 >
                   Remove the watermark →
                 </a>
@@ -332,7 +332,7 @@ export default function PerfectFitClient() {
 
           {/* All-ratios rail — the value made visible */}
           <aside className="space-y-2.5">
-            <div className="text-xs font-medium uppercase tracking-wide text-foreground/40">Your art · every size</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-foreground/55">Your art · every size</div>
             <RatioStrip
               image={image}
               focal={focal}
@@ -341,7 +341,7 @@ export default function PerfectFitClient() {
               onSelect={(id) => setRatio(PF_RATIOS.find((r) => r.id === id) ?? PF_RATIOS[0])}
               landscape={orientation === 'landscape'}
             />
-            <p className="pt-1 text-xs leading-relaxed text-foreground/35">
+            <p className="pt-1 text-xs leading-relaxed text-foreground/50">
               Each export is a full pack of print sizes, framed around your subject.
             </p>
           </aside>
