@@ -251,7 +251,7 @@ export default function PerfectFitClient() {
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-foreground/45">
-            <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size</span>
+            <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size, portrait or landscape</span>
             <span className="flex items-center gap-1.5"><Crop size={14} className="text-accent-light" /> Framed around your subject</span>
             <span className="flex items-center gap-1.5"><BadgeCheck size={14} className="text-accent-light" /> 300 DPI, print-ready</span>
           </div>
