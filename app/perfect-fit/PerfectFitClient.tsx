@@ -234,7 +234,7 @@ export default function PerfectFitClient() {
                       <div className="overflow-hidden rounded-md border border-foreground/20" style={{ width: w, height: h }}>
                         {/* Same sample art cropped to every ratio — shows "one upload, every size". */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/perfect-fit-sample.jpg" alt="" className="h-full w-full object-cover" />
+                        <img src="/perfect-fit-sample.jpg" alt="" className="h-full w-full object-cover object-[50%_38%]" />
                       </div>
                       <span className="text-[10px] text-foreground/55">{r.label}</span>
                     </div>
