@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { usePostHog } from 'posthog-js/react'
 import { BadgeCheck, Check, Crop, Layers, Loader, UploadCloud } from 'lucide-react'
 import { PF_RATIOS, type PFRatio } from './lib/ratios'
 import { type Focal } from '../crop-preview/lib/crop'
@@ -23,6 +24,7 @@ const PHASE_LABEL: Record<Phase, string> = {
 export default function PerfectFitClient() {
   const { user } = useUser()
   const isPro = (user?.publicMetadata as { plan?: string } | undefined)?.plan === 'pro'
+  const posthog = usePostHog()
 
   const [file, setFile] = useState<File | null>(null)
   const [image, setImage] = useState<HTMLImageElement | null>(null)
@@ -31,20 +33,33 @@ export default function PerfectFitClient() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // Track whether the seller dragged the crop (vs. trusting auto-focal) — UX signal.
+  const focalAdjustedRef = useRef(false)
 
   const loadFile = useCallback((f: File) => {
     setMessage(null)
     if (!f.type.startsWith('image/')) { setMessage('Please choose an image file.'); return }
     setFile(f)
+    focalAdjustedRef.current = false
     const img = new Image()
-    img.onload = async () => { setImage(img); setFocal(await detectFocal(img)) }
+    img.onload = async () => {
+      setImage(img)
+      setFocal(await detectFocal(img))
+      posthog?.capture('perfect_fit_image_uploaded', { plan: isPro ? 'pro' : 'free', source: 'perfect_fit' })
+    }
     img.onerror = () => setMessage('Could not load that image.')
     img.src = URL.createObjectURL(f)
-  }, [])
+  }, [posthog, isPro])
 
   function reset() {
     abortRef.current?.abort()
     setImage(null); setFile(null); setPhase('idle'); setMessage(null)
+    focalAdjustedRef.current = false
+  }
+
+  function handleFocalChange(f: Focal) {
+    focalAdjustedRef.current = true
+    setFocal(f)
   }
 
   async function pollUntilDone(jobId: string, signal: AbortSignal) {
@@ -76,6 +91,8 @@ export default function PerfectFitClient() {
     const ac = new AbortController()
     abortRef.current = ac
     setMessage(null)
+    const plan = isPro ? 'pro' : 'free'
+    const startedAt = Date.now()
     try {
       setPhase('uploading')
       const up = await fetch('/api/upload', {
@@ -102,20 +119,47 @@ export default function PerfectFitClient() {
         signal: ac.signal,
       })
       if (enq.status === 402 || enq.status === 429) {
+        posthog?.capture('rate_limit_hit', { kind: 'FREE_LIMIT', source: 'perfect_fit' })
+        posthog?.capture('paywall_view', { trigger: 'FREE_LIMIT', plan })
         const q = await enq.json().catch(() => ({}))
-        throw new Error(q.message || 'Daily free limit reached. Go Pro for unlimited exports.')
+        setPhase('error')
+        setMessage(q.message || 'Daily free limit reached. Go Pro for unlimited exports.')
+        return
       }
       if (!enq.ok) throw new Error('Could not start export')
       const jobId = (await enq.json())?.job_id as string | undefined
       if (!jobId) throw new Error('Enqueue returned no job_id')
 
+      posthog?.capture('perfect_fit_export_started', {
+        pack_template: ratio.group,
+        file_count: ratio.count,
+        focal_adjusted: focalAdjustedRef.current,
+        plan,
+        source: 'perfect_fit',
+      })
+
       await pollUntilDone(jobId, ac.signal)
+      if (ac.signal.aborted) return
+
+      posthog?.capture('perfect_fit_export_completed', {
+        pack_template: ratio.group,
+        file_count: ratio.count,
+        duration_ms: Date.now() - startedAt,
+        plan,
+        source: 'perfect_fit',
+      })
 
       const a = document.createElement('a')
       a.href = `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent('/perfect-fit')}`
       a.click()
     } catch (e) {
       if (ac.signal.aborted) return
+      posthog?.capture('perfect_fit_export_failed', {
+        pack_template: ratio.group,
+        reason: e instanceof Error ? e.message : 'unknown',
+        plan,
+        source: 'perfect_fit',
+      })
       setPhase('error')
       setMessage(e instanceof Error ? e.message : 'Something went wrong')
     }
@@ -189,7 +233,7 @@ export default function PerfectFitClient() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
           {/* Workspace */}
           <div className="space-y-4">
-            <CropCanvas image={image} ratio={ratio} focal={focal} onFocalChange={setFocal} />
+            <CropCanvas image={image} ratio={ratio} focal={focal} onFocalChange={handleFocalChange} />
 
             <div className="flex flex-wrap items-center gap-4">
               <button
