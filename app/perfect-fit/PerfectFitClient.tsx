@@ -196,19 +196,20 @@ export default function PerfectFitClient() {
       </header>
 
       {!image && (
-        <div className="mt-6 lg:mt-12">
-          <div className="grid items-center gap-10 lg:grid-cols-[3fr_2fr]">
-            <div>
+        <div className="mt-6 lg:mt-10">
+          <div className="grid items-stretch gap-8 lg:grid-cols-[3fr_2fr]">
+            {/* Hero: the only action that matters here */}
+            <div className="flex flex-col">
               <label
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) loadFile(f) }}
-                className="flex h-56 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-colors hover:border-accent/40"
+                className="flex min-h-[15rem] w-full flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-colors hover:border-accent/40"
                 style={{ background: 'radial-gradient(ellipse at center, #12101a 0%, #0b0b0f 100%)' }}
               >
                 <UploadCloud className="h-7 w-7 text-foreground/40" />
                 <div>
                   <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
-                  <div className="mt-1 text-xs text-foreground/40">See it fit to every size before you export</div>
+                  <div className="mt-1 text-xs text-foreground/40">JPG or PNG · see it framed to every size before you export</div>
                 </div>
                 <input
                   type="file"
@@ -220,28 +221,34 @@ export default function PerfectFitClient() {
               {message && <p className="mt-3 text-sm text-error">{message}</p>}
             </div>
 
-            <div className="hidden lg:block">
+            {/* What you'll get — a mix of portrait and landscape so both read at a glance */}
+            <div className="hidden lg:flex lg:flex-col lg:justify-center">
               <div className="text-xs font-medium uppercase tracking-wide text-foreground/40">What you&apos;ll get</div>
-              <div className="mt-4 flex items-end gap-3">
-                {PF_RATIOS.map((r) => {
-                  const w = 48
-                  const h = Math.min(84, Math.round(w * (r.h / r.w)))
+              <div className="mt-4 flex flex-wrap items-end gap-2.5">
+                {PF_RATIOS.map((r, i) => {
+                  const land = i % 2 === 1
+                  const aw = land ? r.h : r.w
+                  const ah = land ? r.w : r.h
+                  const long = 58
+                  const w = aw >= ah ? long : Math.round(long * (aw / ah))
+                  const h = ah >= aw ? long : Math.round(long * (ah / aw))
+                  const label = /^\d+:\d+$/.test(r.label) ? (land ? r.label.split(':').reverse().join(':') : r.label) : r.label
                   return (
                     <div key={r.id} className="flex flex-col items-center gap-1.5">
-                      <div className="rounded-md border border-border bg-accent/[0.04]" style={{ width: w, height: h }} />
-                      <span className="text-[10px] text-foreground/40">{r.label}</span>
+                      <div className="rounded-md border border-foreground/20 bg-foreground/[0.03]" style={{ width: w, height: h }} />
+                      <span className="text-[10px] text-foreground/40">{label}</span>
                     </div>
                   )
                 })}
               </div>
               <p className="mt-4 max-w-xs text-xs leading-relaxed text-foreground/45">
-                One upload becomes a print-ready pack for every common Etsy ratio, each framed around your subject.
+                One upload, framed to every common Etsy ratio — portrait or landscape, each ZIP under Etsy&apos;s 20MB.
               </p>
             </div>
           </div>
 
-          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-foreground/45">
-            <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size</span>
+          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-foreground/45">
+            <span className="flex items-center gap-1.5"><Layers size={14} className="text-accent-light" /> Every Etsy size, portrait or landscape</span>
             <span className="flex items-center gap-1.5"><Crop size={14} className="text-accent-light" /> Framed around your subject</span>
             <span className="flex items-center gap-1.5"><BadgeCheck size={14} className="text-accent-light" /> 300 DPI, print-ready</span>
           </div>
