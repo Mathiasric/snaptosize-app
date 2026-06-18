@@ -225,18 +225,14 @@ export default function PerfectFitClient() {
             <div className="hidden lg:flex lg:flex-col lg:justify-center">
               <div className="text-xs font-medium uppercase tracking-wide text-foreground/40">What you&apos;ll get</div>
               <div className="mt-4 flex flex-wrap items-end gap-2.5">
-                {PF_RATIOS.map((r, i) => {
-                  const land = i % 2 === 1
-                  const aw = land ? r.h : r.w
-                  const ah = land ? r.w : r.h
+                {PF_RATIOS.map((r) => {
                   const long = 58
-                  const w = aw >= ah ? long : Math.round(long * (aw / ah))
-                  const h = ah >= aw ? long : Math.round(long * (ah / aw))
-                  const label = /^\d+:\d+$/.test(r.label) ? (land ? r.label.split(':').reverse().join(':') : r.label) : r.label
+                  const w = r.w >= r.h ? long : Math.round(long * (r.w / r.h))
+                  const h = r.h >= r.w ? long : Math.round(long * (r.h / r.w))
                   return (
                     <div key={r.id} className="flex flex-col items-center gap-1.5">
                       <div className="rounded-md border border-foreground/20 bg-foreground/[0.03]" style={{ width: w, height: h }} />
-                      <span className="text-[10px] text-foreground/40">{label}</span>
+                      <span className="text-[10px] text-foreground/40">{r.label}</span>
                     </div>
                   )
                 })}
