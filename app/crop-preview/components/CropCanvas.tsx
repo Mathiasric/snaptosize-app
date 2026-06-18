@@ -10,11 +10,12 @@ type Props = {
   ratio: RatioDef
   focal: Focal
   onFocalChange: (f: Focal) => void
+  landscape?: boolean
 }
 
 const MAX_DISPLAY = 560 // px, longest display edge
 
-export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props) {
+export default function CropCanvas({ image, ratio, focal, onFocalChange, landscape }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -33,8 +34,10 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.drawImage(image, 0, 0, dispW, dispH)
 
     // dim outside the crop box. Multi-aspect packs (Common sizes) preview their
-    // representative aspect (11x14) — a gentle, common crop, not the worst case.
-    const box = boxFor(ratio.w, ratio.h, focal, srcW, srcH)
+    // representative aspect (11x14). Landscape swaps the aspect (3:2 vs 2:3).
+    const aw = landscape ? ratio.h : ratio.w
+    const ah = landscape ? ratio.w : ratio.h
+    const box = boxFor(aw, ah, focal, srcW, srcH)
     const bx = box.x * scale
     const by = box.y * scale
     const bw = box.width * scale
@@ -53,7 +56,7 @@ export default function CropCanvas({ image, ratio, focal, onFocalChange }: Props
     ctx.shadowBlur = 3
     ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2)
     ctx.shadowBlur = 0
-  }, [image, ratio, focal])
+  }, [image, ratio, focal, landscape])
 
   // Relative drag: grab anywhere and slide the crop to frame the subject —
   // smoother + more precise than jump-to-click. Aspect-agnostic.

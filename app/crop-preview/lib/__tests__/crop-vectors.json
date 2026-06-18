@@ -4,6 +4,7 @@
     { "name": "left clamp", "w": 2, "h": 3, "focal": { "x": 0, "y": 0.5 }, "srcW": 300, "srcH": 300, "expected": { "x": 0, "y": 0, "width": 200, "height": 300 } },
     { "name": "right clamp", "w": 2, "h": 3, "focal": { "x": 1, "y": 0.5 }, "srcW": 300, "srcH": 300, "expected": { "x": 100, "y": 0, "width": 200, "height": 300 } },
     { "name": "wide 4:5 full height", "w": 4, "h": 5, "focal": { "x": 0.5, "y": 0.5 }, "srcW": 1000, "srcH": 500, "expected": { "x": 300, "y": 0, "width": 400, "height": 500 } },
-    { "name": "half-rounding guard (banker's-round trap)", "w": 1, "h": 1, "focal": { "x": 0.5, "y": 0.5 }, "srcW": 201, "srcH": 298, "expected": { "x": 0, "y": 49, "width": 201, "height": 201 } }
+    { "name": "half-rounding guard (banker's-round trap)", "w": 1, "h": 1, "focal": { "x": 0.5, "y": 0.5 }, "srcW": 201, "srcH": 298, "expected": { "x": 0, "y": 49, "width": 201, "height": 201 } },
+    { "name": "3:2 landscape centered on square", "w": 3, "h": 2, "focal": { "x": 0.5, "y": 0.5 }, "srcW": 300, "srcH": 300, "expected": { "x": 0, "y": 50, "width": 300, "height": 200 } }
   ]
 }

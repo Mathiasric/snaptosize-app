@@ -33,6 +33,7 @@ export default function PerfectFitClient() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait')
   const abortRef = useRef<AbortController | null>(null)
   // Track whether the seller dragged the crop (vs. trusting auto-focal) — UX signal.
   const focalAdjustedRef = useRef(false)
@@ -129,6 +130,7 @@ export default function PerfectFitClient() {
           group: ratio.group,
           mode: 'crop',
           focal: { x: focal.x, y: focal.y },
+          orientation: orientation === 'landscape' ? 'Landscape' : 'Portrait',
           artwork_name: file.name,
         }),
         signal: ac.signal,
@@ -149,6 +151,7 @@ export default function PerfectFitClient() {
         pack_template: ratio.group,
         file_count: ratio.count,
         focal_adjusted: focalAdjustedRef.current,
+        orientation,
         plan,
         source: 'perfect_fit',
       })
@@ -160,6 +163,7 @@ export default function PerfectFitClient() {
         pack_template: ratio.group,
         file_count: ratio.count,
         duration_ms: Date.now() - startedAt,
+        orientation,
         plan,
         source: 'perfect_fit',
       })
@@ -248,7 +252,21 @@ export default function PerfectFitClient() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
           {/* Workspace */}
           <div className="space-y-4">
-            <CropCanvas image={image} ratio={ratio} focal={focal} onFocalChange={handleFocalChange} />
+            <div className="inline-flex rounded-lg border border-border p-0.5">
+              {(['portrait', 'landscape'] as const).map((o) => (
+                <button
+                  key={o}
+                  onClick={() => setOrientation(o)}
+                  aria-pressed={orientation === o}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                    orientation === o ? 'bg-accent/15 text-accent-light' : 'text-foreground/50 hover:text-foreground/80'
+                  }`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+            <CropCanvas image={image} ratio={ratio} focal={focal} onFocalChange={handleFocalChange} landscape={orientation === 'landscape'} />
 
             <div className="flex flex-wrap items-center gap-4">
               <button
@@ -311,6 +329,7 @@ export default function PerfectFitClient() {
               ratios={PF_RATIOS}
               selectedId={ratio.id}
               onSelect={(id) => setRatio(PF_RATIOS.find((r) => r.id === id) ?? PF_RATIOS[0])}
+              landscape={orientation === 'landscape'}
             />
             <p className="pt-1 text-xs leading-relaxed text-foreground/35">
               Each export is a full pack of print sizes, framed around your subject.

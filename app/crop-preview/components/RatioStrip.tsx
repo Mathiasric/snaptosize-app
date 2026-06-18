@@ -10,26 +10,29 @@ type Props = {
   ratios: Ratio[]
   selectedId: string
   onSelect: (id: string) => void
+  landscape?: boolean
 }
 
 const THUMB = 56 // px longest edge of each thumbnail
 
-function Thumb({ image, focal, ratio }: { image: HTMLImageElement; focal: Focal; ratio: Ratio }) {
+function Thumb({ image, focal, ratio, landscape }: { image: HTMLImageElement; focal: Focal; ratio: Ratio; landscape?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const box = boxFor(ratio.w, ratio.h, focal, image.naturalWidth, image.naturalHeight)
+    const aw = landscape ? ratio.h : ratio.w
+    const ah = landscape ? ratio.w : ratio.h
+    const box = boxFor(aw, ah, focal, image.naturalWidth, image.naturalHeight)
     const scale = THUMB / Math.max(box.width, box.height)
     canvas.width = Math.round(box.width * scale)
     canvas.height = Math.round(box.height * scale)
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(image, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height)
-  }, [image, focal, ratio])
+  }, [image, focal, ratio, landscape])
   return <canvas ref={ref} className="rounded-[3px]" />
 }
 
-export default function RatioStrip({ image, focal, ratios, selectedId, onSelect }: Props) {
+export default function RatioStrip({ image, focal, ratios, selectedId, onSelect, landscape }: Props) {
   return (
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
       {ratios.map((r) => {
@@ -46,7 +49,7 @@ export default function RatioStrip({ image, focal, ratios, selectedId, onSelect 
             }`}
           >
             <div className="flex h-14 w-14 shrink-0 items-center justify-center">
-              <Thumb image={image} focal={focal} ratio={r} />
+              <Thumb image={image} focal={focal} ratio={r} landscape={landscape} />
             </div>
             <div className="min-w-0">
               <div className={`text-sm font-semibold ${selected ? 'text-foreground' : 'text-foreground/80'}`}>
