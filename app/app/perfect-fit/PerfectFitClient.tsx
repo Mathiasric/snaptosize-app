@@ -40,7 +40,10 @@ export default function PerfectFitClient() {
 
   const loadFile = useCallback((f: File) => {
     setMessage(null)
-    if (!f.type.startsWith('image/')) { setMessage('Please choose an image file.'); return }
+    // Runner (Pillow) reliably handles only JPG/PNG/WEBP. Extension fallback covers
+    // valid files with an empty/odd MIME; block others up front, not at the runner.
+    const supported = ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name)
+    if (!supported) { setMessage('Use a JPG, PNG, or WEBP file.'); return }
     setFile(f)
     focalAdjustedRef.current = false
     const img = new Image()
@@ -213,7 +216,7 @@ export default function PerfectFitClient() {
                 </div>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                   className="hidden"
                   onChange={(e) => e.target.files?.[0] && loadFile(e.target.files[0])}
                 />
