@@ -587,6 +587,7 @@ export default function AppPage() {
                 and these packs are portrait. Different shapes, so it won&apos;t fit cleanly.{" "}
                 <Link
                   href="/app/perfect-fit"
+                  onClick={() => posthog?.capture("orientation_nudge_perfect_fit_clicked", { image_orientation: imageOrientation, source: "size_packs" })}
                   className="font-semibold text-accent-light underline underline-offset-2 hover:text-accent"
                 >
                   Try Perfect Fit
