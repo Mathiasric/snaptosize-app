@@ -529,13 +529,13 @@ export default function MyPacksPage() {
                 {orientationMismatch && (
                   <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs">
                     <p className="font-semibold text-red-300">
-                      Orientation mismatch — export blocked
+                      {selectedPack.orientation} sizes, {imageOrientation} image
                     </p>
                     <p className="mt-1 text-red-200/85">
-                      This pack creates {selectedPack.orientation.toLowerCase()} prints, but your
-                      image is {imageOrientation?.toLowerCase()}. Exporting would stretch the
-                      artwork and produce poor results. Upload a {selectedPack.orientation.toLowerCase()}{" "}
-                      image, or pick a {imageOrientation?.toLowerCase()} pack from your library.
+                      These sizes are {selectedPack.orientation.toLowerCase()} and your image is{" "}
+                      {imageOrientation?.toLowerCase()}. Different shapes, so they won&apos;t line up.
+                      For a clean result, pair a {selectedPack.orientation.toLowerCase()} image with a{" "}
+                      {selectedPack.orientation.toLowerCase()} pack.
                     </p>
                   </div>
                 )}
