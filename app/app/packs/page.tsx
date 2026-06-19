@@ -11,6 +11,7 @@ import type { Job, JobStatus } from "../components/JobCard";
 import { GenerateButton } from "../components/GenerateButton";
 import { OutputPreviewPanel } from "../components/OutputPreviewPanel";
 import { XCircle, FolderDown, Check, Download, Upload, Layers, X } from "lucide-react";
+import Link from "next/link";
 import { useQuota } from "../context/QuotaContext";
 import { UpsellBanner } from "../components/UpsellBanner";
 import { SignupNudge } from "../components/SignupNudge";
@@ -171,6 +172,7 @@ export default function AppPage() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const posthog = usePostHog();
   const [introSeen, setIntroSeen] = useState<boolean | null>(null); // null until mounted (SSR safe)
+  const [imageOrientation, setImageOrientation] = useState<"Portrait" | "Landscape" | "Square" | null>(null);
 
   // Read intro-seen flag once on mount.
   useEffect(() => {
@@ -192,6 +194,30 @@ export default function AppPage() {
       setIntroSeen(true);
     }
   }, [state.phase, introSeen]);
+
+  // Detect uploaded image orientation (client-side). These packs are portrait-only
+  // and the runner force-resizes to fixed dims, so a landscape/square image distorts.
+  // Mirrors the My Packs classifier (0.95–1.05 = square tolerance band).
+  useEffect(() => {
+    if (!state.file) {
+      setImageOrientation(null);
+      return;
+    }
+    const url = URL.createObjectURL(state.file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const ratio = img.naturalWidth / img.naturalHeight;
+      if (Math.abs(ratio - 1) < 0.05) setImageOrientation("Square");
+      else if (ratio > 1) setImageOrientation("Landscape");
+      else setImageOrientation("Portrait");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setImageOrientation(null);
+    };
+    img.src = url;
+  }, [state.file]);
 
   // First-render: assume intro is needed (null state) so SSR matches client first-paint for new visitors.
   const showIntro = introSeen !== true;
@@ -542,6 +568,27 @@ export default function AppPage() {
             disabled={busy}
             isPro={isPro}
           />
+
+          {/* Soft nudge (not a block): these packs are portrait, so a non-portrait
+              image would distort. Route to Perfect Fit, which reframes it cleanly. */}
+          {imageOrientation && imageOrientation !== "Portrait" && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs">
+              <p className="font-semibold text-amber-200">
+                Portrait sizes, {imageOrientation} image
+              </p>
+              <p className="mt-1 text-amber-100/85">
+                Your image is {imageOrientation.toLowerCase()}{" "}
+                and these packs are portrait. Different shapes, so it won&apos;t fit cleanly.{" "}
+                <Link
+                  href="/app/perfect-fit"
+                  className="font-semibold text-accent-light underline underline-offset-2 hover:text-accent"
+                >
+                  Try Perfect Fit
+                </Link>{" "}
+                to reframe it to portrait, or upload a portrait image.
+              </p>
+            </div>
+          )}
 
           <PackSelector
             selected={state.selected}
