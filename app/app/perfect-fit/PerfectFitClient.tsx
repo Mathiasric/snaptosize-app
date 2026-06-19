@@ -5,10 +5,10 @@ import { useUser } from '@clerk/nextjs'
 import { usePostHog } from 'posthog-js/react'
 import { BadgeCheck, Check, Crop, Layers, UploadCloud } from 'lucide-react'
 import { PF_RATIOS, type PFRatio } from './lib/ratios'
-import { type Focal } from '../crop-preview/lib/crop'
-import { detectFocal } from '../crop-preview/lib/autoFocal'
-import CropCanvas from '../crop-preview/components/CropCanvas'
-import RatioStrip from '../crop-preview/components/RatioStrip'
+import { type Focal } from '../../crop-preview/lib/crop'
+import { detectFocal } from '../../crop-preview/lib/autoFocal'
+import CropCanvas from '../../crop-preview/components/CropCanvas'
+import RatioStrip from '../../crop-preview/components/RatioStrip'
 
 type Phase = 'idle' | 'uploading' | 'queued' | 'running' | 'done' | 'error'
 
@@ -40,7 +40,10 @@ export default function PerfectFitClient() {
 
   const loadFile = useCallback((f: File) => {
     setMessage(null)
-    if (!f.type.startsWith('image/')) { setMessage('Please choose an image file.'); return }
+    // Runner (Pillow) reliably handles only JPG/PNG/WEBP. Extension fallback covers
+    // valid files with an empty/odd MIME; block others up front, not at the runner.
+    const supported = ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name)
+    if (!supported) { setMessage('Use a JPG, PNG, or WEBP file.'); return }
     setFile(f)
     focalAdjustedRef.current = false
     const img = new Image()
@@ -169,7 +172,7 @@ export default function PerfectFitClient() {
       })
 
       const a = document.createElement('a')
-      a.href = `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent('/perfect-fit')}`
+      a.href = `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent('/app/perfect-fit')}`
       a.click()
     } catch (e) {
       if (ac.signal.aborted) return
@@ -191,7 +194,7 @@ export default function PerfectFitClient() {
       <header className="mb-7">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Perfect Fit</h1>
         <p className="mt-1.5 max-w-xl text-sm text-foreground/50">
-          One artwork, framed to every Etsy print size.
+          One artwork, framed to every Etsy print size. You choose what stays in frame.
         </p>
       </header>
 
@@ -209,11 +212,11 @@ export default function PerfectFitClient() {
                 <UploadCloud className="h-7 w-7 text-foreground/55" />
                 <div>
                   <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
-                  <div className="mt-1 text-xs text-foreground/55">JPG, PNG, or WEBP · see it framed to every size before you export</div>
+                  <div className="mt-1 text-xs text-foreground/55">JPG, JPEG, PNG, or WEBP · see it framed to every size before you export</div>
                 </div>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                   className="hidden"
                   onChange={(e) => e.target.files?.[0] && loadFile(e.target.files[0])}
                 />

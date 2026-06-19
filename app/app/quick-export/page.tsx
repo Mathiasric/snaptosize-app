@@ -359,6 +359,11 @@ export default function QuickExportPage() {
   async function exportSingle() {
     if (!state.file || !selectedSize) return;
 
+    posthog?.capture("quick_export_started", {
+      size: selectedSize,
+      file_size_kb: Math.round(state.file.size / 1024),
+    });
+
     dispatch({ type: "reset" });
     dispatch({ type: "set_file", file: state.file });
 
@@ -615,7 +620,7 @@ export default function QuickExportPage() {
                   disabled={!state.file || busy}
                   loading={busy}
                   onClick={exportSingle}
-                  label="Export JPG"
+                  label={!state.file ? "Upload an image to start" : "Export JPG"}
                   loadingLabel="Exporting..."
                 />
 

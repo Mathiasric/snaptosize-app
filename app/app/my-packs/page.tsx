@@ -823,7 +823,7 @@ function TemplateRatioPreview({ template }: { template: PackTemplate }) {
       {ratios.map((r, i) => (
         <div
           key={i}
-          className="rounded-[3px] border border-foreground/15 bg-foreground/5 transition-colors group-hover:border-accent/30 group-hover:bg-accent/5"
+          className="rounded-[3px] border border-foreground/25 bg-foreground/10 transition-colors group-hover:border-accent/40 group-hover:bg-accent/10"
           style={{ width: `${r.w * baseSize}px`, height: `${r.h * baseSize}px` }}
         />
       ))}
