@@ -387,6 +387,12 @@ export default function AppPage() {
   async function generate() {
     if (!state.file || selectedGroups.length === 0) return;
 
+    posthog?.capture("pack_export_started", {
+      pack_count: selectedGroups.length,
+      groups: selectedGroups,
+      file_size_kb: Math.round(state.file.size / 1024),
+    });
+
     dispatch({ type: "reset" });
     dispatch({ type: "set_file", file: state.file });
 

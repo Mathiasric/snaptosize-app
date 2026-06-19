@@ -4,6 +4,15 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, X, ImageIcon, Maximize2 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
+// Runner (Pillow) reliably handles only these. Block others (HEIC/AVIF/TIFF…)
+// up front instead of accepting then failing the export at the runner.
+const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+function isSupportedImage(f: File): boolean {
+  if (SUPPORTED_IMAGE_TYPES.includes(f.type)) return true;
+  // Some OSes report an empty/odd MIME for valid files — trust the extension.
+  return /\.(jpe?g|png|webp)$/i.test(f.name);
+}
+
 interface UploadZoneProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
@@ -16,6 +25,7 @@ interface UploadZoneProps {
 export function UploadZone({ file, onFileChange, disabled, isPro = false, compact = false }: UploadZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [formatError, setFormatError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const posthog = usePostHog();
@@ -23,12 +33,14 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false, compac
   const handleFile = useCallback(
     (f: File | null) => {
       if (preview) URL.revokeObjectURL(preview);
-      if (f && f.type.startsWith("image/")) {
+      if (f && isSupportedImage(f)) {
+        setFormatError(null);
         setPreview(URL.createObjectURL(f));
         onFileChange(f);
       } else {
         setPreview(null);
         onFileChange(null);
+        setFormatError(f ? "Use a JPG, PNG, or WEBP file." : null);
       }
     },
     [onFileChange, preview],
@@ -204,11 +216,14 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false, compac
           <p className="mt-1 text-xs text-foreground/30">
             or click to browse
           </p>
+          {formatError && (
+            <p className="mt-1.5 text-xs font-medium text-amber-300">{formatError}</p>
+          )}
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
           disabled={disabled}
           className="hidden"
           onChange={(e) => handleFile(e.target.files?.[0] ?? null)}

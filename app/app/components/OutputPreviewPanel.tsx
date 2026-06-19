@@ -60,7 +60,7 @@ export function OutputPreviewPanel({ selectedGroups, file }: Props) {
                 <span className="truncate font-mono text-foreground/80">{file.name}</span>
               </span>
             ) : (
-              <span className="font-mono text-foreground/55">your_artwork</span>
+              <span className="italic text-foreground/40">Your artwork</span>
             )}
             <span className="text-foreground/30">→</span>
             <span className="tabular-nums text-foreground/55">
