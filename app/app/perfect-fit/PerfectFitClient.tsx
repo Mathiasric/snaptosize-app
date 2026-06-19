@@ -212,7 +212,7 @@ export default function PerfectFitClient() {
                 <UploadCloud className="h-7 w-7 text-foreground/55" />
                 <div>
                   <div className="text-sm font-medium text-foreground/80">Drop your artwork, or click to choose</div>
-                  <div className="mt-1 text-xs text-foreground/55">JPG, PNG, or WEBP · see it framed to every size before you export</div>
+                  <div className="mt-1 text-xs text-foreground/55">JPG, JPEG, PNG, or WEBP · see it framed to every size before you export</div>
                 </div>
                 <input
                   type="file"

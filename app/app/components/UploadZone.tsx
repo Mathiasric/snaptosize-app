@@ -216,6 +216,7 @@ export function UploadZone({ file, onFileChange, disabled, isPro = false, compac
           <p className="mt-1 text-xs text-foreground/30">
             or click to browse
           </p>
+          <p className="mt-1.5 text-[11px] text-foreground/25">JPG, JPEG, PNG, or WEBP</p>
           {formatError && (
             <p className="mt-1.5 text-xs font-medium text-amber-300">{formatError}</p>
           )}
