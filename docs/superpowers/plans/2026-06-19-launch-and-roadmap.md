@@ -95,3 +95,11 @@ measured A/B, never a pre-launch gut change.
 - **Warning/error copy:** geometry is the reason, never the product the villain. See memory
   `feedback_warning_copy_tone`.
 - **DO-NOT-BUILD:** CMYK/TIFF (per memory `project_perfect_fit_strategic_review`).
+
+---
+
+## Strategy & sequencing (Jun 19 reflection)
+- **Reality check:** ~25 lifetime Pro users, 1 annual (early). The constraint is **volume + brand trust, not price** — better product (Perfect Fit done) + marketing-site/social trust-building drive conversions.
+- **Pricing: keep stable** ($11.99/mo, $97/yr). Too little data to change anything; raising price on thin volume hurts. Annual is arguably *underpriced* for serious sellers — room to test ~$119 **later, only after conversion is healthy**. Don't add 3/6-month tiers (decision friction + cannibalizes annual).
+- **Revenue path:** sizing beachhead → distribution works → **~$100k ARR** (a traffic/funnel problem; product is ready). **$1M ARR is NOT reachable on sizing alone** (bounded niche + free-tool pressure cap it ~$100–300k). The $1M bridge is **mockups** (bigger market, higher WTP, same customer) — but **far future, only after the sizing product has solidified + distribution works + the beachhead is won.** Do not chase mockups prematurely.
+- **MVA (Norwegian VAT):** threshold NOK 50k/12mo **per ENK (all activity combined)**; SnapToSize alone likely under. When crossed, **absorb the 25% (don't raise price)** while small + competing vs free. EU digital-service VAT is separate — use Stripe Tax + a regnskapsfører. Don't let MVA drive pricing now. (Orientation only — not tax advice.)
