@@ -76,5 +76,30 @@ Tab bar = label + icon only (clean). Descriptor = page subtitle (situation-based
 
 ---
 
+## Size Packs orientation warning — spec (immediate fast-follow after the bar launches)
+
+**Why:** Verified in the runner (`services/runner/main.py:897–929`): the standard pack branch reads no orientation and does `img.resize((w,h), LANCZOS)` — a *forced* resize to fixed **portrait** dims. So a landscape or square image is silently **distorted** today, with no warning. Size Packs is portrait-only (every spec is portrait; no landscape path in this branch). My Packs already guards this; Size Packs (the 71% core mode) does not.
+
+**Sequencing — fast-follow, NOT bundled into the bar merge.** Build this as its own verified change *right after* the bar launches, so: (a) the bar merge stays low-risk (nav + route only), and (b) Perfect Fit is live for the warning to route to. The current silent distortion is pre-existing, so a short continuation is no regression. Treat as careful core-mode work: own branch off main, own verification.
+
+**File:** `app/app/packs/page.tsx` only (net-new orientation logic — the page has none today).
+
+**Logic:**
+1. **Detect image orientation** — reuse the My Packs pattern verbatim (`my-packs/page.tsx:116–136`): `useEffect` on file → `new Image()` onload → `ratio = naturalWidth/naturalHeight` → `Math.abs(ratio-1) < 0.05` ⇒ Square, `>1` ⇒ Landscape, else Portrait. New state `imageOrientation: 'Portrait'|'Landscape'|'Square'|null`.
+2. **Trigger:** warn when `file && imageOrientation && imageOrientation !== 'Portrait'`. Portrait ⇒ silent (the 71% case). Target orientation is always Portrait here, so no pack-orientation comparison needed (simpler than My Packs).
+3. **Behavior — SOFT warning, do NOT disable export** (deliberately different from My Packs' hard block). Rationale: it's the core front-door mode; a hard gate that ever misfires (e.g. a near-square within the 0.05 band) would block a legitimate export — high cost. A soft, prominent nudge has near-zero false-positive cost and still steers correctly. If post-launch data shows people exporting distorted anyway, escalate to a block then.
+
+**Copy** (applies the warning-tone rule — geometry is the reason, never "stretch/distort/poor", no em dash):
+> **Heading:** Portrait sizes, {imageOrientation} image
+> **Body:** Your image is {landscape/square} and these packs are portrait. Different shapes, so it won't fit cleanly. Try Perfect Fit to reframe it to portrait, or upload a portrait image.
+> **CTA:** "Try Perfect Fit" -> `/app/perfect-fit`
+
+**Image handoff (#1) — v1 vs fast-follow.** A `File` can't ride a URL, and there's no shared store above both routes yet. So **v1 = the CTA links to `/app/perfect-fit` and the user re-uploads** (cheap, acceptable). Carry-over (image persists into Perfect Fit, one tap, no re-upload) is a separate fast-follow once a shared upload store exists — that's the real, scoped form of idea #1, justified only by this handoff.
+
+**Verify:** orientation detection is client-side, so testable on localhost without auth — upload a landscape image to `/app/packs` -> warning appears; upload portrait -> silent; square -> warning. Plus the CTA navigates to `/app/perfect-fit`.
+
+---
+
 ## After this (separate, not a blocker)
 - Single-export Perfect Fit (Resize⟷Crop toggle on Quick Export): decide on PostHog signal after launch. North star = upload-first canvas with a method toggle, which dissolves the scope-vs-method awkwardness entirely. Build toward it; don't accrete more tabs.
+- Image carry-over across modes (idea #1): only as the handoff for the Size Packs -> Perfect Fit CTA above. Needs a shared upload store (sessionStorage/IndexedDB or a provider above both routes). Low standalone value; build only with the warning's CTA.
