@@ -5,10 +5,10 @@ import { useUser } from '@clerk/nextjs'
 import { usePostHog } from 'posthog-js/react'
 import { BadgeCheck, Check, Crop, Layers, UploadCloud } from 'lucide-react'
 import { PF_RATIOS, type PFRatio } from './lib/ratios'
-import { type Focal } from '../crop-preview/lib/crop'
-import { detectFocal } from '../crop-preview/lib/autoFocal'
-import CropCanvas from '../crop-preview/components/CropCanvas'
-import RatioStrip from '../crop-preview/components/RatioStrip'
+import { type Focal } from '../../crop-preview/lib/crop'
+import { detectFocal } from '../../crop-preview/lib/autoFocal'
+import CropCanvas from '../../crop-preview/components/CropCanvas'
+import RatioStrip from '../../crop-preview/components/RatioStrip'
 
 type Phase = 'idle' | 'uploading' | 'queued' | 'running' | 'done' | 'error'
 
@@ -169,7 +169,7 @@ export default function PerfectFitClient() {
       })
 
       const a = document.createElement('a')
-      a.href = `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent('/perfect-fit')}`
+      a.href = `/api/download?job_id=${encodeURIComponent(jobId)}&return_to=${encodeURIComponent('/app/perfect-fit')}`
       a.click()
     } catch (e) {
       if (ac.signal.aborted) return
@@ -191,7 +191,7 @@ export default function PerfectFitClient() {
       <header className="mb-7">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Perfect Fit</h1>
         <p className="mt-1.5 max-w-xl text-sm text-foreground/50">
-          One artwork, framed to every Etsy print size.
+          One artwork, framed to every Etsy print size. You choose what stays in frame.
         </p>
       </header>
 
