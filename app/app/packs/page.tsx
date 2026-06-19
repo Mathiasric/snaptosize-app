@@ -611,6 +611,7 @@ export default function AppPage() {
                   disabled={!state.file || noneSelected || busy}
                   loading={busy}
                   onClick={generate}
+                  label={!state.file ? "Upload an image to start" : noneSelected ? "Select at least one pack" : "Generate"}
                 />
 
                 {/* Remaining packs badge (critical threshold only) */}

@@ -615,7 +615,7 @@ export default function QuickExportPage() {
                   disabled={!state.file || busy}
                   loading={busy}
                   onClick={exportSingle}
-                  label="Export JPG"
+                  label={!state.file ? "Upload an image to start" : "Export JPG"}
                   loadingLabel="Exporting..."
                 />
 
