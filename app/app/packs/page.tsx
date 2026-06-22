@@ -637,13 +637,16 @@ export default function AppPage() {
                   </div>
                 )}
 
-                {/* Need A0 / other sizes */}
-                <p className="text-center text-xs text-foreground/30">
-                  Need A0, 24×36, or 24×32?{" "}
-                  <a href="/app/quick-export" className="text-accent-light hover:underline">
-                    Export individually
-                  </a>
-                </p>
+                {/* Need A0 / other sizes — only once a file is uploaded and not mid-run,
+                    so it's a contextual hint, not permanent footer noise. */}
+                {state.file && !busy && (
+                  <p className="text-center text-xs text-foreground/30">
+                    Need A0, 24×36, or 24×32?{" "}
+                    <a href="/app/quick-export" className="text-accent-light hover:underline">
+                      Export individually
+                    </a>
+                  </p>
+                )}
               </>
             )}
 
